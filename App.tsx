@@ -219,6 +219,7 @@ const App: React.FC = () => {
   
   const lastLocalUpdateRef = useRef<number>(0);
   const hasUnsavedChangesRef = useRef<boolean>(false);
+  const isSyncingRef = useRef<boolean>(false);
   const data = dataLocal;
   const currentDataRef = useRef<AppData>(dataLocal);
   useEffect(() => {
@@ -292,6 +293,7 @@ const App: React.FC = () => {
       lastScheduledDataStrRef.current = dataStr;
 
       setIsSyncing(true);
+      isSyncingRef.current = true;
       const timer = setTimeout(async () => {
         try {
           const { saveData } = await import("./services/supabase");
@@ -304,9 +306,11 @@ const App: React.FC = () => {
             hasUnsavedChangesRef.current = false;
           }
           setIsSyncing(false);
+          isSyncingRef.current = false;
         } catch (err) {
           console.error("Auto Sync Error:", err);
           setIsSyncing(false);
+          isSyncingRef.current = false;
         }
       }, 400); // 400ms debounce
       return () => clearTimeout(timer);
@@ -601,18 +605,18 @@ const App: React.FC = () => {
           return;
         }
 
-        // 3. If there are active unsaved local changes (or currently scheduled) or the user is editing,
-        // we completely trust and keep the local changes. They will automatically debounced-sync to cloud soon.
-        const hasUnsavedLocalState = lastScheduledDataStrRef.current !== null && 
-                                     previousDataSyncRef.current !== null && 
-                                     lastScheduledDataStrRef.current !== previousDataSyncRef.current;
-        if (hasUnsavedLocalState || hasUnsavedChangesRef.current) {
-          return;
-        }
-
-        const wasRecentlyUpdated = Date.now() - lastLocalUpdateRef.current < 5000;
-        if (wasRecentlyUpdated) {
-          return;
+        // 3. Conflict Prevention: If we have unsaved local changes (or currently scheduled) 
+        // OR a sync is currently in progress, we stick with local variations.
+        // They will eventually be pushed and currentDataStr will match incomingStr.
+        const currentLocalStr = JSON.stringify(currentDataRef.current);
+        const hasUnsavedLocalState = lastScheduledDataStrRef.current !== previousDataSyncRef.current;
+        
+        if (hasUnsavedLocalState || hasUnsavedChangesRef.current || isSyncingRef.current || currentLocalStr !== incomingStr) {
+          // If the update came while we are working or if it's already "old" compared to current local state, ignore it.
+          const wasRecentlyUpdated = Date.now() - lastLocalUpdateRef.current < 3000; // 3s window is enough for debounce
+          if (wasRecentlyUpdated || hasUnsavedChangesRef.current) {
+            return;
+          }
         }
 
         // Ensure DEFAULT_COLUMNS are initialized
@@ -771,7 +775,6 @@ const App: React.FC = () => {
         setRedoStack([]);
       }
 
-      previousDataSyncRef.current = JSON.stringify(newData);
       storage.setItem("dps_data", JSON.stringify(newData));
 
       if (currentUser?.uid) {

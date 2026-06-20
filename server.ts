@@ -136,20 +136,34 @@ app.use(express.json({ limit: '10mb' }));
     }
 
     try {
-      // Construct the REST API url for querying the dps_data table
-      const cleanedUrl = supabaseUrl.replace(/\/+$/, '');
-      const testPingUrl = `${cleanedUrl}/rest/v1/dps_data?select=updated_at&limit=1`;
+      // Construct the REST API url for querying the chat_history or dps_data table
+      const cleanedUrl = supabaseUrl.replace(/\/+$/, "");
+      const testPingUrl = `${cleanedUrl}/rest/v1/chat_history?select=id&limit=1`;
       
       console.log(`Pinging Supabase DB at: ${testPingUrl}`);
       
-      const response = await fetch(testPingUrl, {
-        method: 'GET',
+      let response = await fetch(testPingUrl, {
+        method: "GET",
         headers: {
-          'apikey': supabaseAnonKey,
-          'Authorization': `Bearer ${supabaseAnonKey}`,
-          'Accept': 'application/json'
-        }
+          apikey: supabaseAnonKey,
+          Authorization: `Bearer ${supabaseAnonKey}`,
+          Accept: "application/json",
+        },
       });
+
+      // Fallback to dps_data if chat_history doesn't exist yet
+      if (!response.ok) {
+        const dpsPingUrl = `${cleanedUrl}/rest/v1/dps_data?select=updated_at&limit=1`;
+        console.log(`chat_history ping failed, trying dps_data: ${dpsPingUrl}`);
+        response = await fetch(dpsPingUrl, {
+          method: "GET",
+          headers: {
+            apikey: supabaseAnonKey,
+            Authorization: `Bearer ${supabaseAnonKey}`,
+            Accept: "application/json",
+          },
+        });
+      }
       
       if (!response.ok) {
         const errorText = await response.text();
@@ -157,7 +171,7 @@ app.use(express.json({ limit: '10mb' }));
       }
       
       const data = await response.json();
-      console.log("Supabase Keep-Alive query completed successfully. Rows returned:", data.length);
+      console.log("Supabase Keep-Alive query completed successfully.");
       
       return res.json({
         success: true,

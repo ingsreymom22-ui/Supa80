@@ -1252,7 +1252,7 @@ export const SettingsModal: React.FC<Props> = ({ isOpen, onClose, settings, onUp
 
                 <div className="bg-white/50 border border-white/60 p-4 rounded-2xl space-y-4 shadow-sm">
                     <div>
-                        <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-3 pl-1">Select Symbol (5 Custom Shapes)</p>
+                        <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-3 pl-1">Select Symbol (15 Custom Shapes)</p>
                         <div className="grid grid-cols-5 gap-2">
                             {[
                                 { id: 'circle', label: 'Circle', icon: (color: string) => (
@@ -1278,6 +1278,56 @@ export const SettingsModal: React.FC<Props> = ({ isOpen, onClose, settings, onUp
                                 { id: 'diamond', label: 'Diamond', icon: (color: string) => (
                                     <svg viewBox="0 0 100 100" className="w-5.5 h-5.5">
                                         <path d="M50 12 L88 50 L50 88 L12 50 Z" stroke={color} strokeWidth="10" fill="none" strokeLinejoin="round" />
+                                    </svg>
+                                ) },
+                                { id: 'hexagon', label: 'Hexagon', icon: (color: string) => (
+                                    <svg viewBox="0 0 100 100" className="w-5.5 h-5.5">
+                                        <path d="M50 12 L85 32 L85 68 L50 88 L15 68 L15 32 Z" stroke={color} strokeWidth="10" fill="none" strokeLinejoin="round" />
+                                    </svg>
+                                ) },
+                                { id: 'triangle', label: 'Triangle', icon: (color: string) => (
+                                    <svg viewBox="0 0 100 100" className="w-5.5 h-5.5">
+                                        <path d="M50 15 L85 75 L15 75 Z" stroke={color} strokeWidth="10" fill="none" strokeLinejoin="round" />
+                                    </svg>
+                                ) },
+                                { id: 'shield', label: 'Shield', icon: (color: string) => (
+                                    <svg viewBox="0 0 100 100" className="w-5.5 h-5.5">
+                                        <path d="M22 20 L50 12 L78 20 L78 48 C78 66 50 84 50 84 C50 84 22 66 22 48 Z" stroke={color} strokeWidth="10" fill="none" strokeLinejoin="round" />
+                                    </svg>
+                                ) },
+                                { id: 'lightning', label: 'Bolt', icon: (color: string) => (
+                                    <svg viewBox="0 0 100 100" className="w-5.5 h-5.5">
+                                        <path d="M54 10 L24 50 L46 50 L36 88 L74 38 L50 38 Z" stroke={color} strokeWidth="10" fill="none" strokeLinejoin="round" />
+                                    </svg>
+                                ) },
+                                { id: 'crown', label: 'Crown', icon: (color: string) => (
+                                    <svg viewBox="0 0 100 100" className="w-5.5 h-5.5">
+                                        <path d="M15 75 L22 35 L38 52 L50 24 L62 52 L78 35 L85 75 Z" stroke={color} strokeWidth="10" fill="none" strokeLinejoin="round" />
+                                    </svg>
+                                ) },
+                                { id: 'moon', label: 'Moon', icon: (color: string) => (
+                                    <svg viewBox="0 0 100 100" className="w-5.5 h-5.5">
+                                        <path d="M35 25 C48 25 65 35 68 52 C71 68 55 78 42 78 C59 78 74 67 74 49 C74 31 55 18 35 25 Z" stroke={color} strokeWidth="10" fill="none" strokeLinejoin="round" />
+                                    </svg>
+                                ) },
+                                { id: 'sparkle', label: 'Sparkle', icon: (color: string) => (
+                                    <svg viewBox="0 0 100 100" className="w-5.5 h-5.5">
+                                        <path d="M50 15 Q50 50 85 50 Q50 50 50 85 Q50 50 15 50 Q50 50 50 15 Z" stroke={color} strokeWidth="10" fill="none" strokeLinejoin="round" />
+                                    </svg>
+                                ) },
+                                { id: 'octagon', label: 'Octagon', icon: (color: string) => (
+                                    <svg viewBox="0 0 100 100" className="w-5.5 h-5.5">
+                                        <path d="M34 15 L66 15 L85 34 L85 66 L66 85 L34 85 L15 66 L15 34 Z" stroke={color} strokeWidth="10" fill="none" strokeLinejoin="round" />
+                                    </svg>
+                                ) },
+                                { id: 'cross', label: 'Cross', icon: (color: string) => (
+                                    <svg viewBox="0 0 100 100" className="w-5.5 h-5.5">
+                                        <path d="M36 18 L64 18 L64 36 L82 36 L82 64 L64 64 L64 82 L36 82 L36 64 L18 64 L18 36 L36 36 Z" stroke={color} strokeWidth="10" fill="none" strokeLinejoin="round" />
+                                    </svg>
+                                ) },
+                                { id: 'cloud', label: 'Cloud', icon: (color: string) => (
+                                    <svg viewBox="0 0 100 100" className="w-5.5 h-5.5">
+                                        <path d="M32 64 C21 64 16 55 21 45 C26 35 38 35 44 43 C49 31 66 31 72 43 C79 43 83 51 79 59 C75 64 69 64 69 64 L32 64" stroke={color} strokeWidth="10" fill="none" strokeLinejoin="round" />
                                     </svg>
                                 ) }
                             ].map(option => {

@@ -92,7 +92,7 @@ const CARD_THEMES = [
 ];
 
 const renderChecklistSymbol = (
-  symbol: 'circle' | 'square' | 'star' | 'heart' | 'diamond',
+  symbol: 'circle' | 'square' | 'star' | 'heart' | 'diamond' | 'hexagon' | 'triangle' | 'shield' | 'lightning' | 'crown' | 'moon' | 'sparkle' | 'octagon' | 'cross' | 'cloud',
   isCompleted: boolean,
   isToday: boolean,
   taskColor: string,
@@ -194,6 +194,266 @@ const renderChecklistSymbol = (
         <>
           <path 
             d="M50 10 L90 50 L50 90 L10 50 Z" 
+            stroke={isCompleted ? "transparent" : strokeColor} 
+            strokeWidth={strokeWidth} 
+            fill={isCompleted ? taskColor : "#ffffff"} 
+            strokeLinejoin="round"
+            className="transition-all duration-300"
+          />
+          {isCompleted && (
+            <path 
+              d="M32 50 L44 62 L68 38" 
+              fill="none" 
+              stroke="white" 
+              strokeWidth="9" 
+              strokeLinecap="round" 
+              strokeLinejoin="round"
+              className="animate-in zoom-in-75 duration-150"
+            />
+          )}
+        </>
+      );
+      break;
+
+    case 'hexagon':
+      shapeContent = (
+        <>
+          <path 
+            d="M50 10 L85 30 L85 70 L50 90 L15 70 L15 30 Z" 
+            stroke={isCompleted ? "transparent" : strokeColor} 
+            strokeWidth={strokeWidth} 
+            fill={isCompleted ? taskColor : "#ffffff"} 
+            strokeLinejoin="round"
+            className="transition-all duration-300"
+          />
+          {isCompleted && (
+            <path 
+              d="M32 50 L44 62 L68 38" 
+              fill="none" 
+              stroke="white" 
+              strokeWidth="9" 
+              strokeLinecap="round" 
+              strokeLinejoin="round"
+              className="animate-in zoom-in-75 duration-150"
+            />
+          )}
+        </>
+      );
+      break;
+
+    case 'triangle':
+      shapeContent = (
+        <>
+          <path 
+            d="M50 12 L88 78 L12 78 Z" 
+            stroke={isCompleted ? "transparent" : strokeColor} 
+            strokeWidth={strokeWidth} 
+            fill={isCompleted ? taskColor : "#ffffff"} 
+            strokeLinejoin="round"
+            className="transition-all duration-300"
+          />
+          {isCompleted && (
+            <path 
+              d="M34 54 L44 64 L64 43" 
+              fill="none" 
+              stroke="white" 
+              strokeWidth="9" 
+              strokeLinecap="round" 
+              strokeLinejoin="round"
+              className="animate-in zoom-in-75 duration-150"
+            />
+          )}
+        </>
+      );
+      break;
+
+    case 'shield':
+      shapeContent = (
+        <>
+          <path 
+            d="M20 18 L50 10 L80 18 L80 48 C80 68 50 88 50 88 C50 88 20 68 20 48 Z" 
+            stroke={isCompleted ? "transparent" : strokeColor} 
+            strokeWidth={strokeWidth} 
+            fill={isCompleted ? taskColor : "#ffffff"} 
+            strokeLinejoin="round"
+            className="transition-all duration-300"
+          />
+          {isCompleted && (
+            <path 
+              d="M32 48 L44 60 L68 36" 
+              fill="none" 
+              stroke="white" 
+              strokeWidth="9" 
+              strokeLinecap="round" 
+              strokeLinejoin="round"
+              className="animate-in zoom-in-75 duration-150"
+            />
+          )}
+        </>
+      );
+      break;
+
+    case 'lightning':
+      shapeContent = (
+        <>
+          <path 
+            d="M54 8 L22 52 L46 52 L34 92 L78 38 L50 38 Z" 
+            stroke={isCompleted ? "transparent" : strokeColor} 
+            strokeWidth={strokeWidth} 
+            fill={isCompleted ? taskColor : "#ffffff"} 
+            strokeLinejoin="round"
+            className="transition-all duration-300"
+          />
+          {isCompleted && (
+            <path 
+              d="M34 50 L46 62 L66 38" 
+              fill="none" 
+              stroke="white" 
+              strokeWidth="9" 
+              strokeLinecap="round" 
+              strokeLinejoin="round"
+              className="animate-in zoom-in-75 duration-150"
+            />
+          )}
+        </>
+      );
+      break;
+
+    case 'crown':
+      shapeContent = (
+        <>
+          <path 
+            d="M12 78 L20 34 L38 52 L50 22 L62 52 L80 34 L88 78 Z" 
+            stroke={isCompleted ? "transparent" : strokeColor} 
+            strokeWidth={strokeWidth} 
+            fill={isCompleted ? taskColor : "#ffffff"} 
+            strokeLinejoin="round"
+            className="transition-all duration-300"
+          />
+          {isCompleted && (
+            <path 
+              d="M32 56 L44 66 L68 42" 
+              fill="none" 
+              stroke="white" 
+              strokeWidth="9" 
+              strokeLinecap="round" 
+              strokeLinejoin="round"
+              className="animate-in zoom-in-75 duration-150"
+            />
+          )}
+        </>
+      );
+      break;
+
+    case 'moon':
+      shapeContent = (
+        <>
+          <path 
+            d="M32 20 C48 20 68 32 72 52 C76 72 56 84 40 84 C62 84 82 70 82 48 C82 26 58 12 32 20 Z" 
+            stroke={isCompleted ? "transparent" : strokeColor} 
+            strokeWidth={strokeWidth} 
+            fill={isCompleted ? taskColor : "#ffffff"} 
+            strokeLinejoin="round"
+            className="transition-all duration-300"
+          />
+          {isCompleted && (
+            <path 
+              d="M38 50 L48 60 L68 38" 
+              fill="none" 
+              stroke="white" 
+              strokeWidth="9" 
+              strokeLinecap="round" 
+              strokeLinejoin="round"
+              className="animate-in zoom-in-75 duration-150"
+            />
+          )}
+        </>
+      );
+      break;
+
+    case 'sparkle':
+      shapeContent = (
+        <>
+          <path 
+            d="M50 10 Q50 50 90 50 Q50 50 50 90 Q50 50 10 50 Q50 50 50 10 Z" 
+            stroke={isCompleted ? "transparent" : strokeColor} 
+            strokeWidth={strokeWidth} 
+            fill={isCompleted ? taskColor : "#ffffff"} 
+            strokeLinejoin="round"
+            className="transition-all duration-300"
+          />
+          {isCompleted && (
+            <path 
+              d="M32 50 L44 62 L68 38" 
+              fill="none" 
+              stroke="white" 
+              strokeWidth="9" 
+              strokeLinecap="round" 
+              strokeLinejoin="round"
+              className="animate-in zoom-in-75 duration-150"
+            />
+          )}
+        </>
+      );
+      break;
+
+    case 'octagon':
+      shapeContent = (
+        <>
+          <path 
+            d="M32 12 L68 12 L88 32 L88 68 L68 88 L32 88 L12 68 L12 32 Z" 
+            stroke={isCompleted ? "transparent" : strokeColor} 
+            strokeWidth={strokeWidth} 
+            fill={isCompleted ? taskColor : "#ffffff"} 
+            strokeLinejoin="round"
+            className="transition-all duration-300"
+          />
+          {isCompleted && (
+            <path 
+              d="M32 50 L44 62 L68 38" 
+              fill="none" 
+              stroke="white" 
+              strokeWidth="9" 
+              strokeLinecap="round" 
+              strokeLinejoin="round"
+              className="animate-in zoom-in-75 duration-150"
+            />
+          )}
+        </>
+      );
+      break;
+
+    case 'cross':
+      shapeContent = (
+        <>
+          <path 
+            d="M34 14 L66 14 L66 34 L86 34 L86 66 L66 66 L66 86 L34 86 L34 66 L14 66 L14 34 L34 34 Z" 
+            stroke={isCompleted ? "transparent" : strokeColor} 
+            strokeWidth={strokeWidth} 
+            fill={isCompleted ? taskColor : "#ffffff"} 
+            strokeLinejoin="round"
+            className="transition-all duration-300"
+          />
+          {isCompleted && (
+            <path 
+              d="M36 50 L46 60 L64 42" 
+              fill="none" 
+              stroke="white" 
+              strokeWidth="9" 
+              strokeLinecap="round" 
+              strokeLinejoin="round"
+              className="animate-in zoom-in-75 duration-150"
+            />
+          )}
+        </>
+      );
+      break;
+
+    case 'cloud':
+      shapeContent = (
+        <>
+          <path 
+            d="M30 68 C18 68 12 58 18 46 C24 34 40 34 48 44 C54 28 74 28 82 44 C90 44 94 54 88 64 C82 70 74 68 74 68 L30 68" 
             stroke={isCompleted ? "transparent" : strokeColor} 
             strokeWidth={strokeWidth} 
             fill={isCompleted ? taskColor : "#ffffff"} 

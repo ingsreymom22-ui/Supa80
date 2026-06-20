@@ -63,6 +63,7 @@ export interface AppSettings {
   paperStyle?: string;
   tableBorderThickness?: number;
   tableBorderColor?: string;
+  dailyPerformanceSymbol?: 'circle' | 'square' | 'star' | 'heart' | 'diamond';
   dopamineFast?: any;
   dopamineFastsHistory?: any[];
   weeklyAIInsight?: Record<string, string>;

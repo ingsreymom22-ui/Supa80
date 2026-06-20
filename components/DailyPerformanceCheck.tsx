@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   Plus, 
@@ -46,19 +46,24 @@ interface DailyPerformanceCheckProps {
 const PRESET_COLORS = [
   { name: 'Vibrant Orange', value: '#f97316' },
   { name: 'Peach Coral', value: '#fca5a5' },
+  { name: 'Deep Pink', value: '#db2777' },
+  { name: 'Hot Pink', value: '#ec4899' },
+  { name: 'Rose Petal', value: '#e11d48' },
+  { name: 'Cherry Red', value: '#ef4444' },
   { name: 'Golden Yellow', value: '#f59e0b' },
   { name: 'Amber Gold', value: '#fbbf24' },
+  { name: 'Dark Sun', value: '#eab308' },
+  { name: 'Lime Juice', value: '#84cc16' },
   { name: 'Emerald', value: '#10b981' },
   { name: 'Mint Green', value: '#34d399' },
-  { name: 'Teal', value: '#14b8a6' },
-  { name: 'Forest Green', value: '#059669' },
-  { name: 'Sage', value: '#86efac' },
-  { name: 'Classic Purple', value: '#a855f7' },
-  { name: 'Deep Purple', value: '#7c3aed' },
+  { name: 'Teal Forest', value: '#14b8a6' },
+  { name: 'Sky Cyan', value: '#06b6d4' },
+  { name: 'Classic Blue', value: '#3b82f6' },
+  { name: 'Royal Blue', value: '#2563eb' },
+  { name: 'Indigo Aura', value: '#6366f1' },
   { name: 'Amethyst', value: '#8b5cf6' },
-  { name: 'Lilac', value: '#d8b4fe' },
-  { name: 'Lavender', value: '#e9d5ff' },
-  { name: 'Cherry Red', value: '#ef4444' }
+  { name: 'Classic Purple', value: '#a855f7' },
+  { name: 'Vibrant Fuchsia', value: '#d946ef' }
 ];
 
 const DEFAULT_TASKS: DailyPerformanceTask[] = [
@@ -86,6 +91,167 @@ const CARD_THEMES = [
   { bg: 'bg-rose-50/70', border: 'border-rose-200/50 hover:border-rose-400 text-[rgb(90,40,40)]', completedBg: 'bg-emerald-50/20 border-emerald-200' }
 ];
 
+const renderChecklistSymbol = (
+  symbol: 'circle' | 'square' | 'star' | 'heart' | 'diamond',
+  isCompleted: boolean,
+  isToday: boolean,
+  taskColor: string,
+  isMobile: boolean
+) => {
+  const sizeClass = isMobile ? "w-9 h-9" : "w-8 h-8";
+  
+  // Uncompleted colors
+  const strokeColor = isToday ? "#f97316" : "#cbd5e1"; // orange-500 today, slate-300 standard
+  const strokeWidth = isToday ? "10" : "8";
+  
+  // Completed colors
+  const shadowStyle = isCompleted 
+    ? { filter: `drop-shadow(0 4px 8px ${taskColor}60)` } 
+    : undefined;
+
+  let shapeContent = null;
+
+  switch (symbol) {
+    case 'square':
+      shapeContent = (
+        <>
+          <rect 
+            x="12" y="12" width="76" height="76" rx="16" 
+            stroke={isCompleted ? "transparent" : strokeColor} 
+            strokeWidth={strokeWidth} 
+            fill={isCompleted ? taskColor : "#ffffff"} 
+            className="transition-all duration-300"
+          />
+          {isCompleted && (
+            <path 
+              d="M32 50 L44 62 L68 38" 
+              fill="none" 
+              stroke="white" 
+              strokeWidth="9" 
+              strokeLinecap="round" 
+              strokeLinejoin="round" 
+              className="animate-in zoom-in-75 duration-150"
+            />
+          )}
+        </>
+      );
+      break;
+
+    case 'star':
+      shapeContent = (
+        <>
+          <path 
+            d="M50 8 L62 36 L92 38 L68 58 L76 88 L50 72 L24 88 L32 58 L8 38 L38 36 Z" 
+            stroke={isCompleted ? "transparent" : strokeColor} 
+            strokeWidth={strokeWidth} 
+            fill={isCompleted ? taskColor : "#ffffff"} 
+            strokeLinejoin="round"
+            className="transition-all duration-300"
+          />
+          {isCompleted && (
+            <path 
+              d="M33 50 L44 61 L65 39" 
+              fill="none" 
+              stroke="white" 
+              strokeWidth="9" 
+              strokeLinecap="round" 
+              strokeLinejoin="round"
+              className="animate-in zoom-in-75 duration-150"
+            />
+          )}
+        </>
+      );
+      break;
+
+    case 'heart':
+      shapeContent = (
+        <>
+          <path 
+            d="M50 84 L18 52 C6 38 10 14 30 14 C40 14 46 22 50 28 C54 22 60 14 70 14 C90 14 94 38 82 52 Z" 
+            stroke={isCompleted ? "transparent" : strokeColor} 
+            strokeWidth={strokeWidth} 
+            fill={isCompleted ? taskColor : "#ffffff"} 
+            strokeLinejoin="round"
+            className="transition-all duration-300"
+          />
+          {isCompleted && (
+            <path 
+              d="M33 46 L44 57 L65 35" 
+              fill="none" 
+              stroke="white" 
+              strokeWidth="9" 
+              strokeLinecap="round" 
+              strokeLinejoin="round"
+              className="animate-in zoom-in-75 duration-150"
+            />
+          )}
+        </>
+      );
+      break;
+
+    case 'diamond':
+      shapeContent = (
+        <>
+          <path 
+            d="M50 10 L90 50 L50 90 L10 50 Z" 
+            stroke={isCompleted ? "transparent" : strokeColor} 
+            strokeWidth={strokeWidth} 
+            fill={isCompleted ? taskColor : "#ffffff"} 
+            strokeLinejoin="round"
+            className="transition-all duration-300"
+          />
+          {isCompleted && (
+            <path 
+              d="M32 50 L44 62 L68 38" 
+              fill="none" 
+              stroke="white" 
+              strokeWidth="9" 
+              strokeLinecap="round" 
+              strokeLinejoin="round"
+              className="animate-in zoom-in-75 duration-150"
+            />
+          )}
+        </>
+      );
+      break;
+
+    case 'circle':
+    default:
+      shapeContent = (
+        <>
+          <circle 
+            cx="50" cy="50" r="40" 
+            stroke={isCompleted ? "transparent" : strokeColor} 
+            strokeWidth={strokeWidth} 
+            fill={isCompleted ? taskColor : "#ffffff"} 
+            className="transition-all duration-300"
+          />
+          {isCompleted && (
+            <path 
+              d="M32 50 L44 62 L68 38" 
+              fill="none" 
+              stroke="white" 
+              strokeWidth="9" 
+              strokeLinecap="round" 
+              strokeLinejoin="round"
+              className="animate-in zoom-in-75 duration-150"
+            />
+          )}
+        </>
+      );
+  }
+
+  return (
+    <svg 
+      viewBox="0 0 100 100" 
+      className={`${sizeClass} cursor-pointer select-none transition-all duration-300 transform active:scale-75 hover:scale-105`}
+      style={shadowStyle}
+    >
+      {shapeContent}
+    </svg>
+  );
+};
+
 export const DailyPerformanceCheck: React.FC<DailyPerformanceCheckProps> = ({ 
   data, 
   onUpdate,
@@ -98,6 +264,8 @@ export const DailyPerformanceCheck: React.FC<DailyPerformanceCheckProps> = ({
   setFilters,
   role
 }) => {
+  const dailyPerformanceSymbol = data.settings?.dailyPerformanceSymbol || 'circle';
+  const taskClickTimesRef = useRef<Record<string, number>>({});
   const [activeSubTab, setActiveSubTab] = useState<'Daily' | 'Tomorrow' | 'Reminder'>('Daily');
 
   const [currentWeekStart, setCurrentWeekStart] = useState<Date>(() => {
@@ -127,62 +295,10 @@ export const DailyPerformanceCheck: React.FC<DailyPerformanceCheckProps> = ({
 
   // Load daily performance check tasks, initializing with default tasks if not set
   const tasks = useMemo(() => {
-    const rawTasks = data.dailyPerformanceTasks && data.dailyPerformanceTasks.length > 0
+    return data.dailyPerformanceTasks && data.dailyPerformanceTasks.length > 0
       ? data.dailyPerformanceTasks
       : DEFAULT_TASKS;
-
-    return rawTasks.map((t) => {
-      let cleanName = t.name;
-      // Handle legacy or old generated prefixes
-      const lower = cleanName.toLowerCase();
-      if (lower.includes('meditation')) {
-        cleanName = 'Meditation for 5 Minutes';
-      } else if (lower.includes('number of students') || lower.includes('grade assignment')) {
-        cleanName = 'Daily Number of Students';
-      } else if (lower.includes('daily learning')) {
-        cleanName = 'Daily Learning';
-      } else if (lower.includes('bullied')) {
-        cleanName = 'Ask if Kids are bullied';
-      } else if (lower.includes('personal journal')) {
-        cleanName = 'Personal Journal';
-      }
-      return {
-        ...t,
-        name: cleanName
-      };
-    });
   }, [data.dailyPerformanceTasks]);
-
-  // Sync back cleaned up names to data store
-  React.useEffect(() => {
-    if (data.dailyPerformanceTasks && data.dailyPerformanceTasks.length > 0) {
-      let needsUpdate = false;
-      const cleaned = data.dailyPerformanceTasks.map((t) => {
-        let cleanName = t.name;
-        const lower = cleanName.toLowerCase();
-        if (lower.includes('meditation')) {
-          cleanName = 'Meditation for 5 Minutes';
-        } else if (lower.includes('number of students') || lower.includes('grade assignment')) {
-          cleanName = 'Daily Number of Students';
-        } else if (lower.includes('daily learning')) {
-          cleanName = 'Daily Learning';
-        } else if (lower.includes('bullied')) {
-          cleanName = 'Ask if Kids are bullied';
-        } else if (lower.includes('personal journal')) {
-          cleanName = 'Personal Journal';
-        }
-        
-        if (cleanName !== t.name) needsUpdate = true;
-        return { ...t, name: cleanName };
-      });
-      if (needsUpdate) {
-        onUpdate({
-          ...data,
-          dailyPerformanceTasks: cleaned
-        });
-      }
-    }
-  }, [data, onUpdate]);
 
   const completions = data.dailyPerformanceCompletions || {};
 
@@ -537,7 +653,7 @@ export const DailyPerformanceCheck: React.FC<DailyPerformanceCheckProps> = ({
   const tomorrowProgressPct = tomorrowTotalCount > 0 ? Math.round((tomorrowCompletedCount / tomorrowTotalCount) * 100) : 0;
 
   return (
-    <div className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8 space-y-6 text-stone-800" id="daily-performance-tracker-container">
+    <div className="flex-1 overflow-y-auto p-2 md:p-6 lg:p-8 space-y-6 text-stone-800" id="daily-performance-tracker-container">
       
       {/* 1. Header Navigation Switcher: Daily, Tomorrow, and Reminder */}
       <div className="flex bg-orange-100/40 p-1 mb-2 border border-orange-200/50 rounded-2xl w-full max-w-lg mx-auto shadow-sm">
@@ -566,9 +682,9 @@ export const DailyPerformanceCheck: React.FC<DailyPerformanceCheckProps> = ({
       {/* 2. Sub-tab Content: Daily planning */}
       {activeSubTab === 'Daily' && (
         <div className="space-y-4 animate-in fade-in duration-150">
-          <div className="bg-white rounded-3xl border border-stone-200 shadow-sm overflow-hidden">
+          <div className="md:bg-white md:rounded-3xl md:border md:border-stone-200 md:shadow-sm md:overflow-hidden">
             {/* Action Header block on Daily: clean and compact */}
-            <div className="p-4 px-6 bg-stone-50/50 border-b border-stone-100 flex items-center justify-between flex-wrap gap-2">
+            <div className="p-4 px-6 bg-white md:bg-stone-50/50 rounded-3xl md:rounded-none border border-stone-150 md:border-none md:border-b md:border-stone-100 flex items-center justify-between flex-wrap gap-2 shadow-sm md:shadow-none mb-3 md:mb-0">
               <div>
                 <h2 className="text-xs font-black text-stone-800 uppercase tracking-widest flex items-center gap-1.5">
                   <span className="w-2 h-2 rounded-full bg-orange-500 shrink-0" />
@@ -598,7 +714,7 @@ export const DailyPerformanceCheck: React.FC<DailyPerformanceCheckProps> = ({
 
             {/* Quick adding task drawer inline */}
             {isAdding && (
-              <div className="p-5 border-b border-stone-100 bg-orange-50/10 space-y-3 animate-in slide-in-from-top-3 duration-200">
+              <div className="p-5 bg-white md:bg-orange-50/10 rounded-3xl md:rounded-none border border-stone-150 md:border-none md:border-b md:border-stone-100 space-y-3 animate-in slide-in-from-top-3 duration-200 shadow-sm md:shadow-none mb-3 md:mb-0">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3 items-end">
                   <div>
                     <label className="text-[9px] font-black text-stone-400 uppercase block mb-1">New Task Name</label>
@@ -625,13 +741,14 @@ export const DailyPerformanceCheck: React.FC<DailyPerformanceCheckProps> = ({
                 </div>
 
                 <div className="flex justify-between items-center pt-2">
-                  <div className="flex gap-1.5 flex-wrap">
-                    {PRESET_COLORS.slice(0, 10).map(col => (
+                  <div className="flex gap-1.5 flex-wrap max-w-[280px]">
+                    {PRESET_COLORS.map(col => (
                       <button
                         key={col.value}
                         type="button"
                         onClick={() => setNewTaskColor(col.value)}
-                        className="w-4.5 h-4.5 rounded-full border transition-all active:scale-95"
+                        className="w-4.5 h-4.5 rounded-full border transition-all active:scale-95 hover:scale-110"
+                        title={col.name}
                         style={{ 
                           backgroundColor: col.value, 
                           borderColor: newTaskColor === col.value ? '#a855f7' : 'transparent',
@@ -720,12 +837,24 @@ export const DailyPerformanceCheck: React.FC<DailyPerformanceCheckProps> = ({
                               />
                               <span 
                                 onClick={() => {
+                                  const now = Date.now();
+                                  const lastTime = taskClickTimesRef.current[task.id] || 0;
+                                  if (now - lastTime < 350) {
+                                    setEditingTaskId(task.id);
+                                    setEditingName(task.name);
+                                    setEditingColor(task.color);
+                                    setEditingPriority(task.priority || 'Medium');
+                                  }
+                                  taskClickTimesRef.current[task.id] = now;
+                                }}
+                                onDoubleClick={() => {
                                   setEditingTaskId(task.id);
                                   setEditingName(task.name);
                                   setEditingColor(task.color);
                                   setEditingPriority(task.priority || 'Medium');
                                 }}
-                                className="font-bold text-xs text-stone-700 tracking-tight hover:text-orange-600 transition-colors"
+                                title="Double-click or double-tap to edit task details"
+                                className="font-bold text-xs text-stone-700 tracking-tight hover:text-orange-600 transition-colors select-none"
                               >
                                 {task.name}
                               </span>
@@ -737,7 +866,6 @@ export const DailyPerformanceCheck: React.FC<DailyPerformanceCheckProps> = ({
                                 {task.priority || 'Medium'}
                               </span>
                             </div>
-                            <Edit2 size={10} className="text-stone-300 opacity-0 group-hover/task:opacity-100 transition-opacity" />
                           </div>
                         )}
                       </td>
@@ -745,21 +873,21 @@ export const DailyPerformanceCheck: React.FC<DailyPerformanceCheckProps> = ({
                       {daysOfWeek.map((day) => {
                         const dateStr = format(day, 'yyyy-MM-dd');
                         const isCompleted = completions[dateStr]?.[task.id] || false;
+                        const isToday = isSameDay(day, new Date());
                         return (
                           <td key={day.toString()} className="text-center py-2 px-1">
                             <button
                               onClick={() => toggleCompletion(dateStr, task.id)}
-                              className={`w-8 h-8 mx-auto rounded-xl flex items-center justify-center transition-all duration-300 transform active:scale-75 relative ${
-                                isCompleted 
-                                  ? 'border-transparent' 
-                                  : 'border-2 border-stone-200 hover:border-stone-300 bg-white hover:bg-stone-50'
-                              }`}
-                              style={{ 
-                                backgroundColor: isCompleted ? task.color : undefined,
-                                boxShadow: isCompleted ? `0 4px 12px -2px ${task.color}60` : undefined
-                              }}
+                              className="focus:outline-none block mx-auto cursor-pointer"
+                              title={`${isCompleted ? 'Completed' : 'Not completed'}: ${task.name}`}
                             >
-                              {isCompleted && <Check size={16} strokeWidth={4} className="text-white drop-shadow-sm" />}
+                              {renderChecklistSymbol(
+                                dailyPerformanceSymbol,
+                                isCompleted,
+                                isToday,
+                                task.color,
+                                false
+                              )}
                             </button>
                           </td>
                         );
@@ -787,58 +915,177 @@ export const DailyPerformanceCheck: React.FC<DailyPerformanceCheckProps> = ({
               </table>
             </div>
 
-            {/* Mobile checklist grid: compact layout */}
-            <div className="block md:hidden divide-y divide-stone-100">
-              {filteredAndSortedTasks.map(task => (
-                <div key={task.id} className="p-3 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-1.5">
-                      <span className="w-2 h-2 rounded-full" style={{ backgroundColor: task.color }} />
-                      <span className="font-bold text-xs text-stone-700">{task.name}</span>
-                      <span className="text-[7.5px] font-black uppercase text-stone-400 bg-stone-100 px-1 rounded">
-                        {task.priority || 'Medium'}
-                      </span>
-                    </div>
-                    <button onClick={() => handleDeleteTask(task.id)} className="text-stone-300 hover:text-rose-500">
-                      <Trash size={11} />
-                    </button>
-                  </div>
+            {/* Mobile checklist grid: premium, spaced card-like list */}
+            <div className="block md:hidden space-y-4 py-2 px-1">
+              {filteredAndSortedTasks.map(task => {
+                const isEditing = editingTaskId === task.id;
+                return (
+                  <div key={task.id} className="bg-white rounded-3xl border border-stone-150 p-4 shadow-sm space-y-3.5 transition-all animate-in fade-in-50 duration-150">
+                    {isEditing ? (
+                      <div className="space-y-3.5 animate-in zoom-in-95 duration-100">
+                        <div className="flex items-center justify-between border-b border-stone-100 pb-2">
+                          <span className="text-[10px] font-black uppercase tracking-widest text-orange-600">Edit Checklist Task</span>
+                          <button
+                            type="button"
+                            onClick={() => setEditingTaskId(null)}
+                            className="text-[10px] font-black uppercase text-stone-400 hover:text-stone-600 transition-colors"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                        <div className="space-y-2">
+                          <input
+                            type="text"
+                            value={editingName}
+                            onChange={(e) => setEditingName(e.target.value)}
+                            className="px-3 py-2 bg-stone-50 border border-stone-200 rounded-xl text-sm font-bold text-stone-800 outline-none w-full focus:border-orange-500 focus:bg-white transition-all shadow-inner"
+                            autoFocus
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') handleSaveTaskEdit(task.id);
+                              if (e.key === 'Escape') setEditingTaskId(null);
+                            }}
+                          />
+                          
+                          <div className="flex flex-col gap-2 pt-1 w-full">
+                            <span className="text-[10px] font-black uppercase tracking-wider text-stone-450 block mb-0.5">Select Accent Color</span>
+                            <div className="flex flex-wrap items-center gap-1.5 max-w-full">
+                              {PRESET_COLORS.map((col) => (
+                                <button
+                                  key={col.value}
+                                  type="button"
+                                  onClick={() => setEditingColor(col.value)}
+                                  className={`w-6 h-6 rounded-full border-2 transition-transform ${editingColor === col.value ? 'scale-110 border-orange-500 ring-2 ring-white ring-offset-2 ring-offset-orange-500' : 'border-transparent hover:scale-110'}`}
+                                  style={{ backgroundColor: col.value }}
+                                  title={col.name}
+                                />
+                              ))}
+                            </div>
+                            
+                            <div className="flex items-center justify-between pt-2 border-t border-stone-100 mt-1">
+                              <span className="text-[10px] font-black uppercase tracking-wider text-stone-450">Priority</span>
+                              <div className="flex bg-stone-100 p-0.5 rounded-xl border border-stone-200">
+                                {(['Low', 'Medium', 'High'] as const).map((pri) => (
+                                  <button
+                                    key={pri}
+                                    type="button"
+                                    onClick={() => setEditingPriority(pri)}
+                                    className={`text-[9.5px] font-black uppercase px-2.5 py-1 rounded-lg transition-all ${editingPriority === pri ? 'bg-white text-stone-900 shadow-xs' : 'text-stone-400 hover:text-stone-600'}`}
+                                  >
+                                    {pri}
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        <button
+                          type="button"
+                          onClick={() => handleSaveTaskEdit(task.id)}
+                          className="w-full py-2.5 bg-orange-500 hover:bg-orange-600 text-white rounded-xl text-[11px] font-black uppercase tracking-widest transition-colors shadow-sm"
+                        >
+                          Save Task Details
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="flex items-center justify-between">
+                        <div 
+                          className="flex items-center gap-2 cursor-pointer select-none group/mtitle flex-1"
+                          title="Double-click or double-tap to edit task"
+                          onDoubleClick={() => {
+                            setEditingTaskId(task.id);
+                            setEditingName(task.name);
+                            setEditingColor(task.color);
+                            setEditingPriority(task.priority || 'Medium');
+                          }}
+                          onClick={() => {
+                            const now = Date.now();
+                            const lastTime = taskClickTimesRef.current[task.id] || 0;
+                            if (now - lastTime < 350) {
+                              setEditingTaskId(task.id);
+                              setEditingName(task.name);
+                              setEditingColor(task.color);
+                              setEditingPriority(task.priority || 'Medium');
+                            }
+                            taskClickTimesRef.current[task.id] = now;
+                          }}
+                        >
+                          <span 
+                            className="w-3.5 h-3.5 rounded-full flex-shrink-0" 
+                            style={{ 
+                              backgroundColor: task.color,
+                              boxShadow: `0 2px 6px ${task.color}40`
+                            }} 
+                          />
+                          <span className="font-extrabold text-[16px] text-stone-850 tracking-tight leading-snug group-hover/mtitle:text-orange-500 transition-colors">
+                            {task.name}
+                          </span>
+                          <span className={`text-[8.5px] font-black uppercase tracking-widest px-2.5 py-0.5 rounded-full border ${
+                            task.priority === 'High' ? 'bg-rose-50 text-rose-600 border-rose-100/60' :
+                            task.priority === 'Medium' ? 'bg-amber-50 text-amber-600 border-amber-100/60' :
+                            'bg-purple-50 text-purple-600 border-purple-100/60'
+                          }`}>
+                            {task.priority || 'Medium'}
+                          </span>
+                        </div>
+                        <button 
+                          onClick={() => handleDeleteTask(task.id)} 
+                          className="text-stone-300 hover:text-rose-500 p-1.5 hover:bg-rose-50 rounded-lg transition-colors ml-2"
+                          title="Delete task"
+                        >
+                          <Trash size={13} />
+                        </button>
+                      </div>
+                    )}
 
-                  <div className="grid grid-cols-7 gap-1 bg-stone-50/50 p-1 rounded-lg border border-stone-100">
+                  <div className="grid grid-cols-7 gap-1.5 pt-1">
                     {daysOfWeek.map((day) => {
                       const dateStr = format(day, 'yyyy-MM-dd');
                       const isCompleted = completions[dateStr]?.[task.id] || false;
                       const isToday = isSameDay(day, new Date());
+                      const dayName = format(day, 'EEE');
+                      const isWeekend = dayName === 'Sat' || dayName === 'Sun';
+
                       return (
-                        <div key={day.toString()} className="flex flex-col items-center gap-0.5">
-                          <span className={`text-[7px] font-bold ${isToday ? 'text-orange-500' : 'text-stone-400'}`}>
-                            {format(day, 'EEE').substring(0, 1)}
+                        <div key={day.toString()} className="flex flex-col items-center gap-1.5">
+                          <span className={`text-[9.5px] font-black uppercase tracking-widest ${
+                            isToday 
+                              ? 'text-orange-500 font-extrabold' 
+                              : isWeekend 
+                                ? 'text-indigo-600' 
+                                : 'text-stone-400'
+                          }`}>
+                            {dayName.toUpperCase()}
                           </span>
                           <button
                             onClick={() => toggleCompletion(dateStr, task.id)}
-                            className={`w-7 h-7 rounded-lg flex items-center justify-center text-[10px] font-bold transition-all duration-300 transform active:scale-75 ${
-                              isCompleted ? 'text-white border-transparent' : 'border-2 border-stone-200 bg-white hover:bg-stone-50 text-stone-600'
-                            }`}
-                            style={{ 
-                              backgroundColor: isCompleted ? task.color : undefined,
-                              boxShadow: isCompleted ? `0 4px 10px -2px ${task.color}60` : undefined
-                            }}
+                            className="focus:outline-none cursor-pointer"
+                            title={`Toggle completion: ${task.name} for ${dayName}`}
                           >
-                            {isCompleted ? <Check size={14} strokeWidth={4} /> : format(day, 'd')}
+                            {renderChecklistSymbol(
+                              dailyPerformanceSymbol,
+                              isCompleted,
+                              isToday,
+                              task.color,
+                              true
+                            )}
                           </button>
                         </div>
                       );
                     })}
                   </div>
                 </div>
-              ))}
+              );
+            })}
               {filteredAndSortedTasks.length === 0 && (
-                <div className="py-8 text-center text-xs font-bold text-stone-400">No tasks listed yet.</div>
+                <div className="py-12 text-center bg-white rounded-3xl border border-stone-150 shadow-sm text-xs font-bold text-stone-400">
+                  No tasks listed yet.
+                </div>
               )}
             </div>
 
             {/* Bottom info row: Total completions */}
-            <div className="bg-stone-50 border-t border-stone-100 p-4 px-6 flex flex-col sm:flex-row items-center justify-between gap-2">
+            <div className="bg-white md:bg-stone-50 rounded-3xl md:rounded-none border border-stone-150 md:border-none md:border-t md:border-stone-100 p-4 px-6 flex flex-col sm:flex-row items-center justify-between gap-2 shadow-sm md:shadow-none mt-3 md:mt-0">
               <div className="flex items-center gap-2">
                 <span className="text-[10px] font-black text-stone-400 uppercase tracking-widest block">
                   Weekly completions:

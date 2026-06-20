@@ -189,7 +189,8 @@ export const SettingsModal: React.FC<Props> = ({ isOpen, onClose, settings, onUp
     backgroundDimOpacity: settings?.backgroundDimOpacity !== undefined ? settings.backgroundDimOpacity : (settings?.backgroundImage === 'solid-white' ? 0 : 20),
     paperStyle: settings?.paperStyle || 'none',
     tableBorderThickness: settings?.tableBorderThickness || 2,
-    tableBorderColor: settings?.tableBorderColor || '#334155'
+    tableBorderColor: settings?.tableBorderColor || '#334155',
+    dailyPerformanceSymbol: settings?.dailyPerformanceSymbol || 'circle'
   });
 
   const updateSettingsRealtimeMultiple = (updates: Partial<AppSettings>) => {
@@ -1238,6 +1239,67 @@ export const SettingsModal: React.FC<Props> = ({ isOpen, onClose, settings, onUp
                             <option value="#94a3b8">Soft Gray (Lighter)</option>
                             <option value="#cbd5e1">Delicate Ghost Gray (Very Light)</option>
                         </select>
+                    </div>
+                </div>
+            </div>
+
+            {/* Daily Performance Checklist Setting */}
+            <div className="space-y-4">
+                <div className="flex items-center gap-2 text-slate-800 font-black mb-2">
+                    <Check size={18} className="text-orange-500" />
+                    <h3 className="tracking-wide">Daily Performance</h3>
+                </div>
+
+                <div className="bg-white/50 border border-white/60 p-4 rounded-2xl space-y-4 shadow-sm">
+                    <div>
+                        <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-3 pl-1">Select Symbol (5 Custom Shapes)</p>
+                        <div className="grid grid-cols-5 gap-2">
+                            {[
+                                { id: 'circle', label: 'Circle', icon: (color: string) => (
+                                    <svg viewBox="0 0 100 100" className="w-5.5 h-5.5">
+                                        <circle cx="50" cy="50" r="38" stroke={color} strokeWidth="10" fill="none" />
+                                    </svg>
+                                ) },
+                                { id: 'square', label: 'Square', icon: (color: string) => (
+                                    <svg viewBox="0 0 100 100" className="w-5.5 h-5.5">
+                                        <rect x="15" y="15" width="70" height="70" rx="14" stroke={color} strokeWidth="10" fill="none" />
+                                    </svg>
+                                ) },
+                                { id: 'star', label: 'Star', icon: (color: string) => (
+                                    <svg viewBox="0 0 100 100" className="w-5.5 h-5.5">
+                                        <path d="M50 8 L62 36 L92 38 L68 58 L76 88 L50 72 L24 88 L32 58 L8 38 L38 36 Z" stroke={color} strokeWidth="10" fill="none" strokeLinejoin="round" />
+                                    </svg>
+                                ) },
+                                { id: 'heart', label: 'Heart', icon: (color: string) => (
+                                    <svg viewBox="0 0 100 100" className="w-5.5 h-5.5">
+                                        <path d="M50 84 L18 52 C6 38 10 14 30 14 C40 14 46 22 50 28 C54 22 60 14 70 14 C90 14 94 38 82 52 Z" stroke={color} strokeWidth="10" fill="none" strokeLinejoin="round" />
+                                    </svg>
+                                ) },
+                                { id: 'diamond', label: 'Diamond', icon: (color: string) => (
+                                    <svg viewBox="0 0 100 100" className="w-5.5 h-5.5">
+                                        <path d="M50 12 L88 50 L50 88 L12 50 Z" stroke={color} strokeWidth="10" fill="none" strokeLinejoin="round" />
+                                    </svg>
+                                ) }
+                            ].map(option => {
+                                const isSelected = (localSettings.dailyPerformanceSymbol || 'circle') === option.id;
+                                return (
+                                    <button
+                                        key={option.id}
+                                        type="button"
+                                        onClick={() => setLocalSettings(prev => ({...prev, dailyPerformanceSymbol: option.id as any}))}
+                                        className={`flex flex-col items-center justify-center p-2 rounded-xl border-2 transition-all hover:scale-105 ${isSelected ? 'border-orange-500 bg-orange-500/5 text-orange-600 font-extrabold shadow-xs' : 'border-slate-200/60 bg-white/40 text-slate-500 hover:border-slate-350'}`}
+                                    >
+                                        <div className="mb-1.5 flex items-center justify-center">
+                                            {option.icon(isSelected ? '#f97316' : '#64748b')}
+                                        </div>
+                                        <span className="text-[9.5px] tracking-tight">{option.label}</span>
+                                        {isSelected && (
+                                            <span className="mt-1 w-1.5 h-1.5 rounded-full bg-orange-500 animate-pulse" />
+                                        )}
+                                    </button>
+                                );
+                            })}
+                        </div>
                     </div>
                 </div>
             </div>

@@ -21,8 +21,7 @@ export const SelfLearningTable: React.FC<SelfLearningTableProps> = ({ data, onUp
   const [showRuler, setShowRuler] = useState(false);
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const [menuPlacement, setMenuPlacement] = useState<'down' | 'up'>('down');
-  const [forceLightBgState, setForceLightBg] = useState<boolean>(false);
-  const forceLightBg = forceLightBgState || data.settings?.backgroundImage === 'solid-white' || data.settings?.highContrastMode;
+  const [forceLightBg, setForceLightBg] = useState<boolean>(false);
   const [showMoreTools, setShowMoreTools] = useState(false);
   const [showMoreMenu, setShowMoreMenu] = useState(false);
   const [showExportMenu, setShowExportMenu] = useState(false);

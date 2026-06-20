@@ -21,8 +21,7 @@ export const DPSSTable: React.FC<DPSSTableProps> = ({ data, onUpdate, onUpdateTo
   const [isUploading, setIsUploading] = useState(false);
   const [isEditorStudyPlanLoading, setIsEditorStudyPlanLoading] = useState(false);
   const [isEditorActionPlanLoading, setIsEditorActionPlanLoading] = useState(false);
-  const [forceLightBgState, setForceLightBg] = useState<boolean>(false);
-  const forceLightBg = forceLightBgState || data.settings?.backgroundImage === 'solid-white' || data.settings?.highContrastMode;
+  const [forceLightBg, setForceLightBg] = useState<boolean>(false);
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const [menuPlacement, setMenuPlacement] = useState<'down' | 'up'>('down');
   const [sharingTopicId, setSharingTopicId] = useState<string | null>(null);

@@ -53,6 +53,11 @@ CREATE TABLE IF NOT EXISTS public.dps_data (
 );
 ALTER TABLE public.dps_data ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Users manage own data" ON public.dps_data FOR ALL USING (auth.uid() = owner_id);
+
+-- Force PostgreSQL to always send full JSON payloads to WebSockets
+ALTER TABLE public.dps_data REPLICA IDENTITY FULL;
+
+-- Enable Realtime
 ALTER PUBLICATION supabase_realtime ADD TABLE dps_data;
   `.trim();
 

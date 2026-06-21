@@ -563,6 +563,14 @@ const App: React.FC = () => {
     if (isAuthInitializing) {
       return;
     }
+    
+    // Reset sync markers on user connection/login to guarantee fresh pull from source of truth
+    isCloudLoadedRef.current = false;
+    hasUnsavedChangesRef.current = false;
+    isSyncingRef.current = false;
+    previousDataSyncRef.current = null;
+    lastScheduledDataStrRef.current = null;
+
     const uid = currentUser?.uid;
     if (!uid) {
       setLoading(false);
@@ -585,6 +593,7 @@ const App: React.FC = () => {
       uid,
       (newData) => {
         clearTimeout(loadTimeout);
+        const isFirstLoad = !isCloudLoadedRef.current;
         isCloudLoadedRef.current = true;
         setLoading(false);
         
@@ -605,17 +614,18 @@ const App: React.FC = () => {
           return;
         }
 
-        // 3. Conflict Prevention: If we have unsaved local changes (or currently scheduled) 
-        // OR a sync is currently in progress, we stick with local variations.
-        // They will eventually be pushed and currentDataStr will match incomingStr.
-        const currentLocalStr = JSON.stringify(currentDataRef.current);
-        const hasUnsavedLocalState = lastScheduledDataStrRef.current !== previousDataSyncRef.current;
-        
-        if (hasUnsavedLocalState || hasUnsavedChangesRef.current || isSyncingRef.current || currentLocalStr !== incomingStr) {
-          // If the update came while we are working or if it's already "old" compared to current local state, ignore it.
-          const wasRecentlyUpdated = Date.now() - lastLocalUpdateRef.current < 3000; // 3s window is enough for debounce
-          if (wasRecentlyUpdated || hasUnsavedChangesRef.current) {
-            return;
+        // 3. Conflict Prevention: Only apply conflict resolution if this is not the initial session load.
+        // On initial login or startup, always trust the database source of truth.
+        if (!isFirstLoad) {
+          const currentLocalStr = JSON.stringify(currentDataRef.current);
+          const hasUnsavedLocalState = lastScheduledDataStrRef.current !== previousDataSyncRef.current;
+          
+          if (hasUnsavedLocalState || hasUnsavedChangesRef.current || isSyncingRef.current || currentLocalStr !== incomingStr) {
+            // If the update came while we are working or if it's already "old" compared to current local state, ignore it.
+            const wasRecentlyUpdated = Date.now() - lastLocalUpdateRef.current < 3000; // 3s window is enough for debounce
+            if (wasRecentlyUpdated || hasUnsavedChangesRef.current) {
+              return;
+            }
           }
         }
 

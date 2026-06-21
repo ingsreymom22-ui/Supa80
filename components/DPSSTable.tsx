@@ -6419,10 +6419,14 @@ export const DPSSTable: React.FC<DPSSTableProps> = ({
                 )}
 
                 <div className="flex items-center gap-1.5 md:gap-2 shrink-0">
-                  <div className="relative z-[200]">
+                  <div className="flex items-center gap-1.5 md:gap-2">
                     <button
                       onClick={() => toggleDropdown("export")}
-                      className="flex items-center gap-2 px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 rounded-lg text-xs font-bold shadow-sm transition-all font-sans"
+                      className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold shadow-sm transition-all font-sans border ${
+                        showExportMenu
+                          ? "bg-slate-200 border-slate-300 text-slate-900 dark:bg-slate-800 dark:border-slate-700 dark:text-white"
+                          : "bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 dark:bg-slate-900 dark:hover:bg-slate-800 dark:text-slate-300 dark:border-slate-850"
+                      }`}
                       title="Export notes"
                     >
                       <Download size={14} />
@@ -6434,16 +6438,17 @@ export const DPSSTable: React.FC<DPSSTableProps> = ({
                     </button>
 
                     {showExportMenu && (
-                      <div className="absolute right-0 top-full mt-2 z-[250] max-w-[85vw] md:w-[220px] bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 p-1.5 flex flex-row md:flex-col gap-1.5 animate-in slide-in-from-top-2 duration-150 overflow-x-auto whitespace-nowrap scrollbar-none">
+                      <div className="flex items-center gap-1.5 animate-in slide-in-from-left-2 duration-150 shrink-0">
                         <button
                           onClick={() => {
                             exportWord();
                             setShowExportMenu(false);
                           }}
-                          className="flex items-center gap-2 text-left px-3 py-2 hover:bg-blue-50 dark:hover:bg-blue-950/30 text-slate-700 dark:text-slate-300 hover:text-blue-700 rounded-xl transition-colors font-bold text-xs whitespace-nowrap shrink-0"
+                          className="flex items-center gap-1.5 px-2.5 py-1.5 bg-blue-50 hover:bg-blue-100 dark:bg-blue-950/30 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-900/50 rounded-lg transition-colors font-bold text-xs whitespace-nowrap shrink-0"
+                          title="Export to MS Word Document"
                         >
                           <FileText size={14} className="text-blue-500" />
-                          <span>MS Word (.doc)</span>
+                          <span>MS Word</span>
                         </button>
                         <button
                           onClick={() => {
@@ -6451,10 +6456,11 @@ export const DPSSTable: React.FC<DPSSTableProps> = ({
                             setShowExportStyleModal(true);
                             setShowExportMenu(false);
                           }}
-                          className="flex items-center gap-2 text-left px-3 py-2 hover:bg-red-50 dark:hover:bg-red-950/30 text-slate-700 dark:text-slate-300 hover:text-red-700 rounded-xl transition-colors font-bold text-xs whitespace-nowrap shrink-0"
+                          className="flex items-center gap-1.5 px-2.5 py-1.5 bg-red-50 hover:bg-red-100 dark:bg-red-950/30 text-red-700 dark:text-red-300 border border-red-200 dark:border-red-900/50 rounded-lg transition-colors font-bold text-xs whitespace-nowrap shrink-0"
+                          title="Export to PDF Document"
                         >
                           <FileDown size={14} className="text-red-500" />
-                          <span>PDF Document</span>
+                          <span>PDF</span>
                         </button>
                       </div>
                     )}

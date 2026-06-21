@@ -190,7 +190,7 @@ export const SettingsModal: React.FC<Props> = ({ isOpen, onClose, settings, onUp
     paperStyle: settings?.paperStyle || 'none',
     tableBorderThickness: settings?.tableBorderThickness || 2,
     tableBorderColor: settings?.tableBorderColor || '#334155',
-    dailyPerformanceSymbol: settings?.dailyPerformanceSymbol || 'circle'
+    dailyPerformanceSymbol: settings?.dailyPerformanceSymbol || 'star'
   });
 
   const updateSettingsRealtimeMultiple = (updates: Partial<AppSettings>) => {
@@ -1331,7 +1331,7 @@ export const SettingsModal: React.FC<Props> = ({ isOpen, onClose, settings, onUp
                                     </svg>
                                 ) }
                             ].map(option => {
-                                const isSelected = (localSettings.dailyPerformanceSymbol || 'circle') === option.id;
+                                const isSelected = (localSettings.dailyPerformanceSymbol || 'star') === option.id;
                                 return (
                                     <button
                                         key={option.id}
@@ -1373,7 +1373,7 @@ export const SettingsModal: React.FC<Props> = ({ isOpen, onClose, settings, onUp
                                         type="button"
                                         key={preset.name}
                                         onClick={() => {
-                                            const updates: Partial<AppSettings> = { backgroundImage: preset.url };
+                                            const updates: Partial<AppSettings> = { backgroundImage: preset.url, backgroundImageBlur: 0 };
                                             if (preset.url === 'solid-white') {
                                                 updates.backgroundDimOpacity = 0;
                                                 updates.appBackgroundColor = '#ffffff';
@@ -1417,7 +1417,7 @@ export const SettingsModal: React.FC<Props> = ({ isOpen, onClose, settings, onUp
                                                 <button
                                                     type="button"
                                                     key={preset.name}
-                                                    onClick={() => updateSettingsRealtimeMultiple({ backgroundImage: preset.url })}
+                                                    onClick={() => updateSettingsRealtimeMultiple({ backgroundImage: preset.url, backgroundImageBlur: 0 })}
                                                     className={`group relative h-11 rounded-lg overflow-hidden border text-left transition-all ${isActive ? 'ring-2 ring-emerald-500 border-transparent shadow shadow-emerald-500/20' : 'border-slate-200/60 hover:border-slate-300'}`}
                                                 >
                                                     <img src={preset.url} className="absolute inset-0 w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity" alt={preset.name} />

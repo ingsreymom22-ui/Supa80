@@ -524,7 +524,7 @@ export const DailyPerformanceCheck: React.FC<DailyPerformanceCheckProps> = ({
   setFilters,
   role
 }) => {
-  const dailyPerformanceSymbol = data.settings?.dailyPerformanceSymbol || 'circle';
+  const dailyPerformanceSymbol = data.settings?.dailyPerformanceSymbol || 'star';
   const taskClickTimesRef = useRef<Record<string, number>>({});
   const [activeSubTab, setActiveSubTab] = useState<'Daily' | 'Tomorrow' | 'Reminder'>('Daily');
 
@@ -943,92 +943,7 @@ export const DailyPerformanceCheck: React.FC<DailyPerformanceCheckProps> = ({
       {activeSubTab === 'Daily' && (
         <div className="space-y-4 animate-in fade-in duration-150">
           <div className="md:bg-white md:rounded-3xl md:border md:border-stone-200 md:shadow-sm md:overflow-hidden">
-            {/* Action Header block on Daily: clean and compact */}
-            <div className="p-4 px-6 bg-white md:bg-stone-50/50 rounded-3xl md:rounded-none border border-stone-150 md:border-none md:border-b md:border-stone-100 flex items-center justify-between flex-wrap gap-2 shadow-sm md:shadow-none mb-3 md:mb-0">
-              <div>
-                <h2 className="text-xs font-black text-stone-800 uppercase tracking-widest flex items-center gap-1.5">
-                  <span className="w-2 h-2 rounded-full bg-orange-500 shrink-0" />
-                  "Where Focus Goes, Energy Flows" Tony Robbins
-                </h2>
-                <p className="text-[10px] text-stone-450 font-bold uppercase tracking-wider font-mono mt-0.5">
-                  MY Compassion for {format(daysOfWeek[0], 'MMM dd')} - {format(daysOfWeek[6], 'MMM dd')}
-                </p>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => setIsAdding(!isAdding)}
-                  className="px-3 py-1.5 bg-orange-100/50 hover:bg-orange-100 text-orange-700 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all"
-                >
-                  {isAdding ? "Cancel" : "+ Add Task"}
-                </button>
-                <button
-                  onClick={handleResetTasksToDefault}
-                  className="px-3 py-1.5 bg-stone-100 hover:bg-stone-200 text-stone-600 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all"
-                  title="Resets to requested 5 standard duties"
-                >
-                  Reset defaults
-                </button>
-              </div>
-            </div>
-
-            {/* Quick adding task drawer inline */}
-            {isAdding && (
-              <div className="p-5 bg-white md:bg-orange-50/10 rounded-3xl md:rounded-none border border-stone-150 md:border-none md:border-b md:border-stone-100 space-y-3 animate-in slide-in-from-top-3 duration-200 shadow-sm md:shadow-none mb-3 md:mb-0">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 items-end">
-                  <div>
-                    <label className="text-[9px] font-black text-stone-400 uppercase block mb-1">New Task Name</label>
-                    <input 
-                      type="text"
-                      placeholder="Enter task name..."
-                      value={newTaskName}
-                      onChange={e => setNewTaskName(e.target.value)}
-                      className="w-full bg-white border border-stone-200 rounded-xl px-3 py-2 text-xs font-bold text-stone-800 outline-none focus:ring-2 focus:ring-orange-500/20"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-[9px] font-black text-stone-400 uppercase block mb-1">Priority</label>
-                    <select
-                      value={newTaskPriority}
-                      onChange={e => setNewTaskPriority(e.target.value as any)}
-                      className="w-full bg-white border border-stone-200 rounded-xl px-3 py-2 text-xs font-bold text-stone-700 outline-none focus:ring-2 focus:ring-orange-500/20"
-                    >
-                      <option value="High">High Priority</option>
-                      <option value="Medium">Medium Priority</option>
-                      <option value="Low">Low Priority</option>
-                    </select>
-                  </div>
-                </div>
-
-                <div className="flex justify-between items-center pt-2">
-                  <div className="flex gap-1.5 flex-wrap max-w-[280px]">
-                    {PRESET_COLORS.map(col => (
-                      <button
-                        key={col.value}
-                        type="button"
-                        onClick={() => setNewTaskColor(col.value)}
-                        className="w-4.5 h-4.5 rounded-full border transition-all active:scale-95 hover:scale-110"
-                        title={col.name}
-                        style={{ 
-                          backgroundColor: col.value, 
-                          borderColor: newTaskColor === col.value ? '#a855f7' : 'transparent',
-                          borderWidth: newTaskColor === col.value ? '2px' : '0' 
-                        }}
-                      />
-                    ))}
-                  </div>
-
-                  <button
-                    onClick={() => handleAddTask()}
-                    className="p-1 px-4 bg-orange-500 hover:bg-orange-600 text-white text-[10px] font-black uppercase tracking-wider rounded-xl transition-all"
-                  >
-                    Confirm Add
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {/* Desktop Checklist Table: Compact spaced */}
+            {/* Desktop Checklist Table: Compact spaced */}`
             <div className="hidden md:block overflow-x-auto">
               <table className="w-full border-collapse min-w-[700px]">
                 <thead>
@@ -1343,6 +1258,91 @@ export const DailyPerformanceCheck: React.FC<DailyPerformanceCheckProps> = ({
                 </div>
               )}
             </div>
+
+            {/* Action Header block on Daily: clean and compact */}
+            <div className="p-4 px-6 bg-white md:bg-stone-50/50 rounded-3xl md:rounded-none border border-stone-150 md:border-none md:border-t md:border-stone-100 flex items-center justify-between flex-wrap gap-2 shadow-sm md:shadow-none mb-3 md:mb-0 mt-3 md:mt-0">
+              <div>
+                <h2 className="text-xs font-black text-stone-800 uppercase tracking-widest flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-orange-500 shrink-0" />
+                  "Where Focus Goes, Energy Flows" Tony Robbins
+                </h2>
+                <p className="text-[10px] text-stone-450 font-bold uppercase tracking-wider font-mono mt-0.5">
+                  MY Compassion for {format(daysOfWeek[0], 'MMM dd')} - {format(daysOfWeek[6], 'MMM dd')}
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2 mt-2 sm:mt-0">
+                <button
+                  onClick={() => setIsAdding(!isAdding)}
+                  className="px-3 py-1.5 bg-orange-100/50 hover:bg-orange-100 text-orange-700 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all"
+                >
+                  {isAdding ? "Cancel" : "+ Add Task"}
+                </button>
+                <button
+                  onClick={handleResetTasksToDefault}
+                  className="px-3 py-1.5 bg-stone-100 hover:bg-stone-200 text-stone-600 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all"
+                  title="Resets to requested 5 standard duties"
+                >
+                  Reset defaults
+                </button>
+              </div>
+            </div>
+
+            {/* Quick adding task drawer inline */}
+            {isAdding && (
+              <div className="p-5 bg-white md:bg-orange-50/10 rounded-3xl md:rounded-none border border-stone-150 md:border-none md:border-t md:border-stone-100 space-y-3 animate-in slide-in-from-top-3 duration-200 shadow-sm md:shadow-none mb-3 md:mb-0">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 items-end">
+                  <div>
+                    <label className="text-[9px] font-black text-stone-400 uppercase block mb-1">New Task Name</label>
+                    <input 
+                      type="text"
+                      placeholder="Enter task name..."
+                      value={newTaskName}
+                      onChange={e => setNewTaskName(e.target.value)}
+                      className="w-full bg-white border border-stone-200 rounded-xl px-3 py-2 text-xs font-bold text-stone-800 outline-none focus:ring-2 focus:ring-orange-500/20"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[9px] font-black text-stone-400 uppercase block mb-1">Priority</label>
+                    <select
+                      value={newTaskPriority}
+                      onChange={e => setNewTaskPriority(e.target.value as any)}
+                      className="w-full bg-white border border-stone-200 rounded-xl px-3 py-2 text-xs font-bold text-stone-700 outline-none focus:ring-2 focus:ring-orange-500/20"
+                    >
+                      <option value="High">High Priority</option>
+                      <option value="Medium">Medium Priority</option>
+                      <option value="Low">Low Priority</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="flex justify-between items-center pt-2">
+                  <div className="flex gap-1.5 flex-wrap max-w-[280px]">
+                    {PRESET_COLORS.map(col => (
+                      <button
+                        key={col.value}
+                        type="button"
+                        onClick={() => setNewTaskColor(col.value)}
+                        className="w-4.5 h-4.5 rounded-full border transition-all active:scale-95 hover:scale-110"
+                        title={col.name}
+                        style={{ 
+                          backgroundColor: col.value, 
+                          borderColor: newTaskColor === col.value ? '#a855f7' : 'transparent',
+                          borderWidth: newTaskColor === col.value ? '2px' : '0' 
+                        }}
+                      />
+                    ))}
+                  </div>
+
+                  <button
+                    onClick={() => handleAddTask()}
+                    className="p-1 px-4 bg-orange-500 hover:bg-orange-600 text-white text-[10px] font-black uppercase tracking-wider rounded-xl transition-all"
+                  >
+                    Confirm Add
+                  </button>
+                </div>
+              </div>
+            )}
 
             {/* Bottom info row: Total completions */}
             <div className="bg-white md:bg-stone-50 rounded-3xl md:rounded-none border border-stone-150 md:border-none md:border-t md:border-stone-100 p-4 px-6 flex flex-col sm:flex-row items-center justify-between gap-2 shadow-sm md:shadow-none mt-3 md:mt-0">

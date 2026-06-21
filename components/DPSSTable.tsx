@@ -410,7 +410,7 @@ export const DPSSTable: React.FC<DPSSTableProps> = ({
       paperBackgroundCss = `
         #pdf-export-body, #pdf-export-container {
           background-color: #ffffff !important;
-          background-image: linear-gradient(#e2e8f0 1.5px, transparent 1.5px) !important;
+          background-image: linear-gradient(#f1f5f9 2px, transparent 2px) !important;
           background-size: 100% 2.25rem !important;
         }
       `;
@@ -432,7 +432,15 @@ export const DPSSTable: React.FC<DPSSTableProps> = ({
           background-size: 1.5rem 1.5rem !important;
         }
       `;
-    } else if (paperStyleToUse === "stars") {
+    } else if (paperStyleToUse === "dots-sparse") {
+      paperBackgroundCss = `
+        #pdf-export-body, #pdf-export-container {
+          background-color: #ffffff !important;
+          background-image: radial-gradient(#cbd5e1 2px, transparent 2px) !important;
+          background-size: 3rem 3rem !important;
+        }
+      `;
+    } else if (paperStyleToUse === "stars" || paperStyleToUse === "light-star") {
       paperBackgroundCss = `
         #pdf-export-body, #pdf-export-container {
           background-color: #f5f3ff !important;
@@ -452,6 +460,34 @@ export const DPSSTable: React.FC<DPSSTableProps> = ({
           background-size: 1rem 1rem !important;
         }
       `;
+    } else if (paperStyleToUse === "grid-emerald" || paperStyleToUse === "mint-cream") {
+      paperBackgroundCss = `
+        #pdf-export-body, #pdf-export-container {
+          background-color: #ecfdf5 !important;
+          background-image: 
+            linear-gradient(rgba(16, 185, 129, 0.1) 1px, transparent 1px) !important,
+            linear-gradient(90deg, rgba(16, 185, 129, 0.1) 1px, transparent 1px) !important;
+          background-size: 1.5rem 1.5rem !important;
+        }
+      `;
+    } else if (paperStyleToUse === "ruled-crimson" || paperStyleToUse === "light-rose" || paperStyleToUse === "roses") {
+      paperBackgroundCss = `
+        #pdf-export-body, #pdf-export-container {
+          background-color: #fff1f2 !important;
+          background-image: linear-gradient(rgba(225, 29, 72, 0.1) 2px, transparent 2px) !important;
+          background-size: 100% 2.25rem !important;
+        }
+      `;
+    } else if (paperStyleToUse === "blueprint-soft" || paperStyleToUse === "ocean-wash") {
+      paperBackgroundCss = `
+        #pdf-export-body, #pdf-export-container {
+          background-color: #ecfeff !important;
+          background-image: 
+            linear-gradient(rgba(8, 145, 178, 0.1) 1px, transparent 1px) !important,
+            linear-gradient(90deg, rgba(8, 145, 178, 0.1) 1px, transparent 1px) !important;
+          background-size: 1rem 1rem !important;
+        }
+      `;
     } else if (paperStyleToUse === "isometric") {
       paperBackgroundCss = `
         #pdf-export-body, #pdf-export-container {
@@ -466,7 +502,16 @@ export const DPSSTable: React.FC<DPSSTableProps> = ({
           background-size: 40px 70px !important;
         }
       `;
-    } else if (paperStyleToUse === "none") {
+    } else if (paperStyleToUse !== "none") {
+      const paperDef = PAPER_STYLES.find(p => p.id === paperStyleToUse);
+      const bgCol = paperDef?.previewColor || "#ffffff";
+      paperBackgroundCss = `
+        #pdf-export-body, #pdf-export-container {
+          background-color: ${bgCol} !important;
+          background-image: none !important;
+        }
+      `;
+    } else {
       paperBackgroundCss = `
         #pdf-export-body, #pdf-export-container {
           background-image: none !important;
@@ -1323,7 +1368,7 @@ export const DPSSTable: React.FC<DPSSTableProps> = ({
   };
   const textFontFamily = dpssSettings.textFontFamily || dpssSettings.fontFamily;
   const textFontSize = Math.max(
-    16,
+    10,
     dpssSettings.textFontSize || dpssSettings.fontSize || 16,
   );
   const tableBorderThickness =
@@ -5557,8 +5602,12 @@ export const DPSSTable: React.FC<DPSSTableProps> = ({
                 <div className="flex gap-1.5 md:gap-2 items-center overflow-x-auto hide-scrollbar pb-0.5 min-w-0">
                   <div className="flex gap-1 bg-white/40 p-1 rounded-lg shrink-0 items-center">
                     <select
+                      value={selectedTopic?.textFontFamily || textFontFamily}
                       onChange={(e) => {
                         const font = e.target.value;
+                        if (selectedTopic) {
+                          updateTopic(selectedTopic.id, { textFontFamily: font });
+                        }
                         const selection = window.getSelection();
                         if (
                           selection &&
@@ -5607,8 +5656,12 @@ export const DPSSTable: React.FC<DPSSTableProps> = ({
                     <div className="w-px h-6 bg-black/5 mx-1" />
 
                     <select
+                      value={selectedTopic?.textFontSize || textFontSize}
                       onChange={(e) => {
                         const size = e.target.value;
+                        if (selectedTopic) {
+                          updateTopic(selectedTopic.id, { textFontSize: parseInt(size) });
+                        }
                         const selection = window.getSelection();
                         if (
                           selection &&
@@ -6381,30 +6434,27 @@ export const DPSSTable: React.FC<DPSSTableProps> = ({
                     </button>
 
                     {showExportMenu && (
-                      <div className="absolute right-0 top-full mt-2 z-[250] w-[180px] bg-white rounded-2xl shadow-2xl border border-slate-200 p-2 flex flex-col gap-1 animate-in slide-in-from-top-2 duration-150">
+                      <div className="absolute right-0 top-full mt-2 z-[250] max-w-[85vw] md:w-[220px] bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 p-1.5 flex flex-row md:flex-col gap-1.5 animate-in slide-in-from-top-2 duration-150 overflow-x-auto whitespace-nowrap scrollbar-none">
                         <button
                           onClick={() => {
                             exportWord();
                             setShowExportMenu(false);
                           }}
-                          className="flex items-center justify-between w-full text-left px-3 py-2 hover:bg-blue-50 text-slate-700 hover:text-blue-700 rounded-xl transition-colors font-bold text-xs"
+                          className="flex items-center gap-2 text-left px-3 py-2 hover:bg-blue-50 dark:hover:bg-blue-950/30 text-slate-700 dark:text-slate-300 hover:text-blue-700 rounded-xl transition-colors font-bold text-xs whitespace-nowrap shrink-0"
                         >
-                          <span className="flex items-center gap-2">
-                            <FileText size={14} className="text-blue-500" /> MS
-                            Word (.doc)
-                          </span>
+                          <FileText size={14} className="text-blue-500" />
+                          <span>MS Word (.doc)</span>
                         </button>
                         <button
                           onClick={() => {
+                            setPdfPaperStyle(selectedTopic?.paperStyle || "none");
                             setShowExportStyleModal(true);
                             setShowExportMenu(false);
                           }}
-                          className="flex items-center justify-between w-full text-left px-3 py-2 hover:bg-red-50 text-slate-700 hover:text-red-700 rounded-xl transition-colors font-bold text-xs"
+                          className="flex items-center gap-2 text-left px-3 py-2 hover:bg-red-50 dark:hover:bg-red-950/30 text-slate-700 dark:text-slate-300 hover:text-red-700 rounded-xl transition-colors font-bold text-xs whitespace-nowrap shrink-0"
                         >
-                          <span className="flex items-center gap-2">
-                            <FileDown size={14} className="text-red-500" /> PDF
-                            Document
-                          </span>
+                          <FileDown size={14} className="text-red-500" />
+                          <span>PDF Document</span>
                         </button>
                       </div>
                     )}
@@ -6556,8 +6606,10 @@ export const DPSSTable: React.FC<DPSSTableProps> = ({
                           onClick={() => setShowMoreMenu(false)}
                         />
 
-                        <div className="fixed md:absolute inset-x-4 bottom-4 md:bottom-auto md:inset-x-auto md:right-0 md:top-full md:mt-2 z-[1000] md:w-[225px] bg-white rounded-2xl shadow-2xl border border-slate-200 p-4 flex flex-col gap-4 animate-in slide-in-from-bottom-5 md:slide-in-from-top-2 duration-150 max-h-[60vh] md:max-h-[350px] overflow-y-auto custom-scrollbar">
-                          <div className="flex items-center justify-between px-2 py-1.5 bg-indigo-50/50 dark:bg-indigo-950/25 rounded-md gap-2 select-none">
+                        <div className="fixed md:absolute inset-x-4 bottom-4 md:bottom-auto md:inset-x-auto md:right-0 md:top-full md:mt-2 z-[1000] w-[calc(100vw-32px)] md:w-[245px] bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 p-4 flex flex-row md:flex-col gap-4 animate-in slide-in-from-bottom-5 md:slide-in-from-top-2 duration-150 overflow-x-auto md:overflow-y-auto scrollbar-none md:max-h-[380px] snap-x snap-mandatory">
+                          {/* Block 1: Smart Show, AI Assist, Media Upload */}
+                          <div className="shrink-0 snap-start w-[180px] md:w-full bg-slate-50/70 dark:bg-slate-950/40 border border-slate-100/60 dark:border-slate-800/40 p-2.5 rounded-2xl flex flex-col gap-2.5 whitespace-normal">
+                            <div className="flex items-center justify-between px-2 py-1.5 bg-indigo-50/50 dark:bg-indigo-950/25 rounded-md gap-2 select-none">
                             <span className="text-[9px] font-black uppercase text-indigo-700 dark:text-indigo-400 tracking-wider flex items-center gap-1">
                               <Wand2
                                 size={11}
@@ -6598,7 +6650,7 @@ export const DPSSTable: React.FC<DPSSTableProps> = ({
                             </button>
                           </div>
 
-                          <div className="h-px bg-slate-100" />
+                          <div className="h-px bg-slate-200/50 dark:bg-slate-800/50" />
 
                           <div>
                             <div className="text-[10px] font-black uppercase text-blue-400 tracking-wider mb-2 flex items-center gap-1.5">
@@ -6610,20 +6662,22 @@ export const DPSSTable: React.FC<DPSSTableProps> = ({
                                 fileInputRef.current?.click();
                                 setShowMoreMenu(false);
                               }}
-                              className="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-blue-50 text-blue-700 rounded-xl transition-all font-black text-[11px] uppercase tracking-wider"
+                              className="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-blue-50 dark:hover:bg-blue-950/30 text-blue-700 dark:text-blue-300 rounded-xl transition-all font-black text-[11px] uppercase tracking-wider"
                             >
                               <FileUp size={12} />
                               Upload File
                             </button>
                           </div>
+                        </div>
 
-                          <div className="h-px bg-slate-100" />
+                        <div className="hidden md:block h-px bg-slate-100 dark:bg-slate-800" />
 
-                          <div>
-                            <div className="text-[10px] font-black uppercase text-slate-400 tracking-wider mb-2 flex items-center gap-1.5">
-                              <Layout size={12} className="text-slate-500" />
-                              Insert Synthesis Card
-                            </div>
+                        {/* Block 2: Synthesis Cards */}
+                        <div className="shrink-0 snap-start w-[180px] md:w-full bg-slate-50/70 dark:bg-slate-950/40 border border-slate-100/60 dark:border-slate-800/40 p-2.5 rounded-2xl flex flex-col gap-2 whitespace-normal">
+                          <div className="text-[10px] font-black uppercase text-slate-400 tracking-wider mb-2 flex items-center gap-1.5">
+                            <Layout size={12} className="text-slate-500" />
+                            Insert Synthesis Card
+                          </div>
                             <div className="grid grid-cols-5 gap-1.5">
                               {[
                                 {
@@ -6714,9 +6768,10 @@ export const DPSSTable: React.FC<DPSSTableProps> = ({
                             </div>
                           </div>
 
-                          <div className="h-px bg-slate-100" />
+                          <div className="hidden md:block h-px bg-slate-100 dark:bg-slate-800" />
 
-                          <div>
+                          {/* Block 3: Q&A Board */}
+                          <div className="shrink-0 snap-start w-[180px] md:w-full bg-slate-50/70 dark:bg-slate-950/40 border border-slate-100/60 dark:border-slate-800/40 p-2.5 rounded-2xl flex flex-col gap-2 whitespace-normal">
                             <div className="text-[10px] font-black uppercase text-slate-400 tracking-wider mb-2 flex items-center gap-1.5">
                               <CheckSquare
                                 size={12}
@@ -6814,9 +6869,10 @@ export const DPSSTable: React.FC<DPSSTableProps> = ({
                             </div>
                           </div>
 
-                          <div className="h-px bg-slate-100" />
+                          <div className="hidden md:block h-px bg-slate-100 dark:bg-slate-800" />
 
-                          <div>
+                          {/* Block 4: Brainstorm Map */}
+                          <div className="shrink-0 snap-start w-[180px] md:w-full bg-slate-50/70 dark:bg-slate-950/40 border border-slate-100/60 dark:border-slate-800/40 p-2.5 rounded-2xl flex flex-col gap-2 whitespace-normal">
                             <div className="text-[10px] font-black uppercase text-slate-400 tracking-wider mb-2 flex items-center gap-1.5">
                               <Zap size={12} className="text-purple-500" />
                               Insert Brainstorm Map
@@ -6925,9 +6981,10 @@ export const DPSSTable: React.FC<DPSSTableProps> = ({
                             </div>
                           </div>
 
-                          <div className="h-px bg-slate-100" />
+                          <div className="hidden md:block h-px bg-slate-100 dark:bg-slate-800" />
 
-                          <div>
+                          {/* Block 5: Pros & Cons Grid */}
+                          <div className="shrink-0 snap-start w-[180px] md:w-full bg-slate-50/70 dark:bg-slate-950/40 border border-slate-100/60 dark:border-slate-800/40 p-2.5 rounded-2xl flex flex-col gap-2 whitespace-normal">
                             <div className="text-[10px] font-black uppercase text-slate-400 tracking-wider mb-2 flex items-center gap-1.5">
                               <Columns size={12} className="text-emerald-500" />
                               Insert Pros & Cons Grid
@@ -7036,9 +7093,10 @@ export const DPSSTable: React.FC<DPSSTableProps> = ({
                             </div>
                           </div>
 
-                          <div className="h-px bg-slate-100" />
+                          <div className="hidden md:block h-px bg-slate-100 dark:bg-slate-800" />
 
-                          <div>
+                          {/* Block 6: 3-column Framework */}
+                          <div className="shrink-0 snap-start w-[180px] md:w-full bg-slate-50/70 dark:bg-slate-950/40 border border-slate-100/60 dark:border-slate-800/40 p-2.5 rounded-2xl flex flex-col gap-2 whitespace-normal">
                             <div className="text-[10px] font-black uppercase text-slate-400 tracking-wider mb-2 flex items-center gap-1.5">
                               <LayoutGrid size={12} className="text-blue-500" />
                               Insert 3-Column Framework
@@ -7133,9 +7191,10 @@ export const DPSSTable: React.FC<DPSSTableProps> = ({
                             </div>
                           </div>
 
-                          <div className="h-px bg-slate-100" />
+                          <div className="hidden md:block h-px bg-slate-100 dark:bg-slate-800" />
 
-                          <div>
+                          {/* Block 7: 4-column Matrix */}
+                          <div className="shrink-0 snap-start w-[180px] md:w-full bg-slate-50/70 dark:bg-slate-950/40 border border-slate-100/60 dark:border-slate-800/40 p-2.5 rounded-2xl flex flex-col gap-2 whitespace-normal">
                             <div className="text-[10px] font-black uppercase text-slate-400 tracking-wider mb-2 flex items-center gap-1.5">
                               <Grid3X3 size={12} className="text-purple-500" />
                               Insert 4-Column Matrix
@@ -8843,28 +8902,66 @@ export const DPSSTable: React.FC<DPSSTableProps> = ({
                     ⚙️ PDF Advanced Settings
                   </div>
 
-                  {/* Paper Pattern dropdown */}
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 block">
-                      Paper Grid Pattern Style
+                  {/* Paper Pattern Selection List */}
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400 block">
+                      📄 Paper Grid Pattern Style
                     </label>
-                    <select
-                      value={pdfPaperStyle}
-                      onChange={(e) => setPdfPaperStyle(e.target.value)}
-                      className="w-full px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-slate-900/80 text-xs text-slate-700 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-orange-500/20 cursor-pointer"
-                    >
-                      <option value="none">Clean White (No Pattern)</option>
-                      <option value="ruled">Classic Ruled Pattern</option>
-                      <option value="grid">Math Grid Pattern</option>
-                      <option value="dots">Bullet Dot Pattern</option>
-                      <option value="stars">Stardust Cosmic Pattern</option>
-                      <option value="engineering">
-                        Engineering Grid Pattern
-                      </option>
-                      <option value="isometric">
-                        3D Isometric Grid Pattern
-                      </option>
-                    </select>
+                    <div className="border border-slate-200 dark:border-slate-800 rounded-3xl overflow-hidden bg-white/90 dark:bg-slate-900/90 shadow-sm">
+                      <div className="max-h-[260px] overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800/60 custom-scrollbar">
+                        {/* DEFAULT PAPER (none) */}
+                        <button
+                          key="none"
+                          type="button"
+                          onClick={() => setPdfPaperStyle("none")}
+                          className="w-full px-4 py-3.5 flex justify-between items-center text-left hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors cursor-pointer group"
+                        >
+                          <span className={`text-[11px] font-black tracking-wider uppercase transition-colors ${
+                            pdfPaperStyle === "none"
+                              ? "text-orange-600 dark:text-orange-400"
+                              : "text-slate-700 dark:text-slate-300 group-hover:text-slate-950 dark:group-hover:text-white"
+                          }`}>
+                            DEFAULT PAPER
+                          </span>
+                          <div className={`h-5 w-5 rounded-full border-2 flex items-center justify-center transition-all ${
+                            pdfPaperStyle === "none"
+                              ? "border-orange-500 bg-orange-500/10"
+                              : "border-slate-300 dark:border-slate-700 group-hover:border-slate-400 dark:group-hover:border-slate-600"
+                          }`}>
+                            {pdfPaperStyle === "none" && (
+                              <div className="h-2.5 w-2.5 rounded-full bg-orange-500" />
+                            )}
+                          </div>
+                        </button>
+
+                        {/* All other PAPER_STYLES */}
+                        {PAPER_STYLES.filter((p) => p.id !== "none").map((p) => (
+                          <button
+                            key={p.id}
+                            type="button"
+                            onClick={() => setPdfPaperStyle(p.id)}
+                            className="w-full px-4 py-3.5 flex justify-between items-center text-left hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors cursor-pointer group"
+                          >
+                            <span className={`text-[11px] font-black tracking-wider uppercase transition-colors ${
+                              pdfPaperStyle === p.id
+                                ? "text-orange-600 dark:text-orange-400"
+                                : "text-slate-700 dark:text-slate-300 group-hover:text-slate-950 dark:group-hover:text-white"
+                            }`}>
+                              {p.name}
+                            </span>
+                            <div className={`h-5 w-5 rounded-full border-2 flex items-center justify-center transition-all ${
+                              pdfPaperStyle === p.id
+                                ? "border-orange-500 bg-orange-500/10"
+                                : "border-slate-300 dark:border-slate-700 group-hover:border-slate-400 dark:group-hover:border-slate-600"
+                            }`}>
+                              {pdfPaperStyle === p.id && (
+                                <div className="h-2.5 w-2.5 rounded-full bg-orange-500" />
+                              )}
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">

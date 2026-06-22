@@ -1323,7 +1323,7 @@ export const DailyPerformanceCheck: React.FC<DailyPerformanceCheckProps> = ({
                         key={col.value}
                         type="button"
                         onClick={() => setNewTaskColor(col.value)}
-                        className="w-4.5 h-4.5 rounded-full border transition-all active:scale-95 hover:scale-110"
+                        className="w-5 h-5 rounded-full border transition-all active:scale-95 hover:scale-110"
                         title={col.name}
                         style={{ 
                           backgroundColor: col.value, 

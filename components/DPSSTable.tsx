@@ -4337,7 +4337,7 @@ export const DPSSTable: React.FC<DPSSTableProps> = ({ data, onUpdate, onUpdateTo
         )}
         {selectedTopic ? (
             <div className="space-y-4 h-full flex flex-col relative pt-12 md:pt-14">
-                <div className="flex items-center gap-2 px-1 min-h-12 absolute -top-1 md:top-2 left-[82px] md:left-[80px] right-0 z-[200]">
+                <div className="flex items-center gap-2 px-1 min-h-12 absolute -top-1 md:top-2 left-24 md:left-[80px] right-0 z-[200]">
                   <input 
                       value={selectedTopic.title} 
                       onChange={(e) => updateTopic(selectedTopic.id, { title: e.target.value })}

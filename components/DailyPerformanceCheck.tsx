@@ -98,7 +98,7 @@ const renderChecklistSymbol = (
   taskColor: string,
   isMobile: boolean
 ) => {
-  const sizeClass = isMobile ? "w-9 h-9" : "w-8 h-8";
+  const sizeClass = isMobile ? "w-9 h-9" : "w-11 h-11 md:w-12 md:h-12";
   
   // Uncompleted colors
   const strokeColor = isToday ? "#f97316" : "#cbd5e1"; // orange-500 today, slate-300 standard
@@ -916,20 +916,20 @@ export const DailyPerformanceCheck: React.FC<DailyPerformanceCheckProps> = ({
     <div className="flex-1 overflow-y-auto p-2 md:p-6 lg:p-8 space-y-6 text-stone-800" id="daily-performance-tracker-container">
       
       {/* 1. Header Navigation Switcher: Daily, Tomorrow, and Reminder */}
-      <div className="flex bg-orange-100/40 p-1 mb-2 border border-orange-200/50 rounded-2xl w-full max-w-lg mx-auto shadow-sm">
+      <div className="flex bg-orange-100/40 p-1 mb-2 border border-orange-200/50 rounded-2xl w-full max-w-lg md:max-w-2xl mx-auto shadow-sm md:p-1.5 md:mb-6">
         {(['Daily', 'Tomorrow', 'Reminder'] as const).map((tab) => {
-          let tabIcon = <Calendar size={13} />;
-          if (tab === 'Tomorrow') tabIcon = <Sparkles size={13} />;
-          if (tab === 'Reminder') tabIcon = <Bell size={13} />;
+          let tabIcon = <Calendar className="w-3.5 h-3.5 md:w-4.5 md:h-4.5" />;
+          if (tab === 'Tomorrow') tabIcon = <Sparkles className="w-3.5 h-3.5 md:w-4.5 md:h-4.5" />;
+          if (tab === 'Reminder') tabIcon = <Bell className="w-3.5 h-3.5 md:w-4.5 md:h-4.5" />;
           
           return (
             <button
               key={tab}
               onClick={() => setActiveSubTab(tab)}
-              className={`flex-1 py-2 px-3 text-center text-xs font-black uppercase tracking-wider rounded-xl transition-all duration-200 flex items-center justify-center gap-1.5 ${
+              className={`flex-1 py-2 px-3 md:py-3 md:px-5 text-center text-xs md:text-sm font-black uppercase tracking-wider rounded-xl md:rounded-2xl transition-all duration-200 flex items-center justify-center gap-1.5 md:gap-2.5 ${
                 activeSubTab === tab
                   ? 'bg-orange-500 text-white shadow-md'
-                  : 'text-stone-605 text-stone-600 hover:bg-orange-50 hover:text-orange-950'
+                  : 'text-stone-605 text-stone-605 hover:bg-orange-50 hover:text-orange-950'
               }`}
             >
               {tabIcon}
@@ -943,24 +943,24 @@ export const DailyPerformanceCheck: React.FC<DailyPerformanceCheckProps> = ({
       {activeSubTab === 'Daily' && (
         <div className="space-y-4 animate-in fade-in duration-150">
           <div className="md:bg-white md:rounded-3xl md:border md:border-stone-200 md:shadow-sm md:overflow-hidden">
-            {/* Desktop Checklist Table: Compact spaced */}`
+            {/* Desktop Checklist Table: Generously spaced & larger for PC view */}
             <div className="hidden md:block overflow-x-auto">
-              <table className="w-full border-collapse min-w-[700px]">
+              <table className="w-full border-collapse min-w-[850px]">
                 <thead>
-                  <tr className="border-b border-stone-100 bg-stone-50/30">
-                    <th className="py-3 px-4 text-left text-[9px] font-black text-stone-450 text-stone-500 uppercase tracking-widest w-[45%]">
+                  <tr className="border-b border-stone-200 bg-stone-50/50">
+                    <th className="py-4 px-6 text-left text-[11px] md:text-xs font-black text-stone-500 uppercase tracking-widest w-[40%]">
                       Task Name & Urgency
                     </th>
                     {daysOfWeek.map((day) => {
                       const isToday = isSameDay(day, new Date());
                       return (
-                        <th key={day.toString()} className="py-3 px-2 text-center text-[9px] font-black uppercase tracking-wider w-16">
-                          <div className="flex flex-col items-center">
-                            <span className={isToday ? 'text-orange-600 font-extrabold' : 'text-stone-400'}>
-                              {format(day, 'EEE')}
+                        <th key={day.toString()} className="py-4 px-3 text-center text-[10px] md:text-[11px] font-black uppercase tracking-wider w-20 md:w-24">
+                          <div className="flex flex-col items-center gap-1">
+                            <span className={`text-[10px] md:text-xs ${isToday ? 'text-orange-600 font-extrabold scale-105' : 'text-stone-400'}`}>
+                              {format(day, 'EEE').toUpperCase()}
                             </span>
-                            <span className={`text-[10px] font-bold ${
-                              isToday ? 'text-orange-600 bg-orange-50 px-1.5 py-0.5 rounded-md' : 'text-stone-600'
+                            <span className={`text-[11px] md:text-sm font-black ${
+                              isToday ? 'text-orange-600 bg-orange-50 px-2 rounded-lg border border-orange-200/50' : 'text-stone-600'
                             }`}>
                               {format(day, 'd')}
                             </span>
@@ -968,15 +968,15 @@ export const DailyPerformanceCheck: React.FC<DailyPerformanceCheckProps> = ({
                         </th>
                       );
                     })}
-                    <th className="py-3 px-4 text-center text-[9px] font-black text-stone-400 uppercase tracking-wider w-14">
+                    <th className="py-4 px-4 text-center text-[10px] md:text-[11px] font-black text-stone-400 uppercase tracking-wider w-16">
                       Del
                     </th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-stone-100">
+                <tbody className="divide-y divide-stone-150">
                   {filteredAndSortedTasks.map((task) => (
                     <tr key={task.id} className="hover:bg-stone-50/20 transition-colors">
-                      <td className="py-2.5 px-4">
+                      <td className="py-4 px-6">
                         {editingTaskId === task.id ? (
                           <div className="flex items-center gap-2 max-w-sm animate-in zoom-in-95 duration-100">
                             <input
@@ -1004,11 +1004,11 @@ export const DailyPerformanceCheck: React.FC<DailyPerformanceCheckProps> = ({
                             </button>
                           </div>
                         ) : (
-                          <div className="flex items-center justify-between group/task cursor-pointer py-0.5">
-                            <div className="flex items-center gap-2">
+                          <div className="flex items-center justify-between group/task cursor-pointer py-1.5">
+                            <div className="flex items-center gap-2.5">
                               <span 
-                                className="w-2.5 h-2.5 rounded-full ring-2 shadow-xs ring-white shrink-0" 
-                                style={{ backgroundColor: task.color }}
+                                className="w-3.5 h-3.5 rounded-full ring-2 shadow-xs ring-white shrink-0" 
+                                style={{ backgroundColor: task.color, boxShadow: `0 2px 6px ${task.color}40` }}
                               />
                               <span 
                                 onClick={() => {
@@ -1029,14 +1029,14 @@ export const DailyPerformanceCheck: React.FC<DailyPerformanceCheckProps> = ({
                                   setEditingPriority(task.priority || 'Medium');
                                 }}
                                 title="Double-click or double-tap to edit task details"
-                                className="font-bold text-xs text-stone-700 tracking-tight hover:text-orange-600 transition-colors select-none"
+                                className="font-extrabold text-xs md:text-sm lg:text-[15px] text-stone-750 tracking-tight hover:text-orange-605 hover:text-orange-600 transition-colors select-none"
                               >
                                 {task.name}
                               </span>
-                              <span className={`px-1.5 py-0.2 rounded-full text-[8px] font-black uppercase tracking-wider ${
-                                task.priority === 'High' ? 'bg-rose-50 text-rose-600' :
-                                task.priority === 'Medium' ? 'bg-amber-50 text-amber-600' :
-                                'bg-purple-50 text-purple-600'
+                              <span className={`px-2 py-0.5 rounded-full text-[8.5px] md:text-[9.5px] font-black uppercase tracking-wider ${
+                                task.priority === 'High' ? 'bg-rose-50 text-rose-600 border border-rose-105/50' :
+                                task.priority === 'Medium' ? 'bg-amber-50 text-amber-600 border border-amber-105/50' :
+                                'bg-purple-50 text-purple-600 border border-purple-105/50'
                               }`}>
                                 {task.priority || 'Medium'}
                               </span>
@@ -1050,10 +1050,10 @@ export const DailyPerformanceCheck: React.FC<DailyPerformanceCheckProps> = ({
                         const isCompleted = completions[dateStr]?.[task.id] || false;
                         const isToday = isSameDay(day, new Date());
                         return (
-                          <td key={day.toString()} className="text-center py-2 px-1">
+                          <td key={day.toString()} className="text-center py-3.5 px-1.5">
                             <button
                               onClick={() => toggleCompletion(dateStr, task.id)}
-                              className="focus:outline-none block mx-auto cursor-pointer"
+                              className="focus:outline-none block mx-auto cursor-pointer p-0.5 hover:scale-105 active:scale-95 transition-transform"
                               title={`${isCompleted ? 'Completed' : 'Not completed'}: ${task.name}`}
                             >
                               {renderChecklistSymbol(
@@ -1068,20 +1068,20 @@ export const DailyPerformanceCheck: React.FC<DailyPerformanceCheckProps> = ({
                         );
                       })}
 
-                      <td className="py-2 px-4 text-center">
+                      <td className="py-3.5 px-4 text-center">
                         <button
                           onClick={() => handleDeleteTask(task.id)}
-                          className="p-1 text-stone-300 hover:text-rose-500 rounded hover:bg-rose-50/50 transition-colors"
+                          className="p-1.5 text-stone-300 hover:text-rose-500 rounded-lg hover:bg-rose-50 transition-colors"
                           title="Delete task"
                         >
-                          <Trash size={12} />
+                          <Trash size={14} />
                         </button>
                       </td>
                     </tr>
                   ))}
                   {filteredAndSortedTasks.length === 0 && (
                     <tr>
-                      <td colSpan={9} className="py-8 text-center text-xs font-bold text-stone-400 tracking-wide uppercase">
+                      <td colSpan={9} className="py-12 text-center text-xs md:text-sm font-bold text-stone-400 tracking-wide uppercase">
                         No duties listed. Reset to default to list standard duties.
                       </td>
                     </tr>
@@ -1259,28 +1259,28 @@ export const DailyPerformanceCheck: React.FC<DailyPerformanceCheckProps> = ({
               )}
             </div>
 
-            {/* Action Header block on Daily: clean and compact */}
-            <div className="p-4 px-6 bg-white md:bg-stone-50/50 rounded-3xl md:rounded-none border border-stone-150 md:border-none md:border-t md:border-stone-100 flex items-center justify-between flex-wrap gap-2 shadow-sm md:shadow-none mb-3 md:mb-0 mt-3 md:mt-0">
+            {/* Action Header block on Daily: clean and spacious */}
+            <div className="p-4 md:p-6 px-6 bg-white md:bg-stone-50/50 rounded-3xl md:rounded-none border border-stone-150 md:border-none md:border-t md:border-stone-100 flex items-center justify-between flex-wrap gap-4 shadow-sm md:shadow-none mb-3 md:mb-0 mt-3 md:mt-0">
               <div>
-                <h2 className="text-xs font-black text-stone-800 uppercase tracking-widest flex items-center gap-1.5">
-                  <span className="w-2 h-2 rounded-full bg-orange-500 shrink-0" />
+                <h2 className="text-xs md:text-sm font-black text-stone-850 uppercase tracking-widest flex items-center gap-2">
+                  <span className="w-2 md:w-2.5 h-2 md:h-2.5 rounded-full bg-orange-500 shrink-0" />
                   "Where Focus Goes, Energy Flows" Tony Robbins
                 </h2>
-                <p className="text-[10px] text-stone-450 font-bold uppercase tracking-wider font-mono mt-0.5">
+                <p className="text-[10px] md:text-xs text-stone-500 font-bold uppercase tracking-wider font-mono mt-1">
                   MY Compassion for {format(daysOfWeek[0], 'MMM dd')} - {format(daysOfWeek[6], 'MMM dd')}
                 </p>
               </div>
 
-              <div className="flex items-center gap-2 mt-2 sm:mt-0">
+              <div className="flex items-center gap-2.5 mt-2 sm:mt-0">
                 <button
                   onClick={() => setIsAdding(!isAdding)}
-                  className="px-3 py-1.5 bg-orange-100/50 hover:bg-orange-100 text-orange-700 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all"
+                  className="px-3.5 py-2 md:px-5 md:py-2.5 bg-orange-100/50 hover:bg-orange-100 text-orange-700 rounded-xl text-[10px] md:text-xs font-black uppercase tracking-wider transition-all"
                 >
                   {isAdding ? "Cancel" : "+ Add Task"}
                 </button>
                 <button
                   onClick={handleResetTasksToDefault}
-                  className="px-3 py-1.5 bg-stone-100 hover:bg-stone-200 text-stone-600 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all"
+                  className="px-3 py-1.5 md:px-5 md:py-2.5 bg-stone-105 bg-stone-100 hover:bg-stone-200 text-stone-605 rounded-xl text-[10px] md:text-xs font-black uppercase tracking-wider transition-all"
                   title="Resets to requested 5 standard duties"
                 >
                   Reset defaults
@@ -1290,24 +1290,24 @@ export const DailyPerformanceCheck: React.FC<DailyPerformanceCheckProps> = ({
 
             {/* Quick adding task drawer inline */}
             {isAdding && (
-              <div className="p-5 bg-white md:bg-orange-50/10 rounded-3xl md:rounded-none border border-stone-150 md:border-none md:border-t md:border-stone-100 space-y-3 animate-in slide-in-from-top-3 duration-200 shadow-sm md:shadow-none mb-3 md:mb-0">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 items-end">
+              <div className="p-5 md:p-6 bg-white md:bg-orange-50/10 rounded-3xl md:rounded-none border border-stone-150 md:border-none md:border-t md:border-stone-100 space-y-4 animate-in slide-in-from-top-3 duration-200 shadow-sm md:shadow-none mb-3 md:mb-0">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-end">
                   <div>
-                    <label className="text-[9px] font-black text-stone-400 uppercase block mb-1">New Task Name</label>
+                    <label className="text-[9px] md:text-[10px] font-black text-stone-450 uppercase block mb-1.5">New Task Name</label>
                     <input 
                       type="text"
                       placeholder="Enter task name..."
                       value={newTaskName}
                       onChange={e => setNewTaskName(e.target.value)}
-                      className="w-full bg-white border border-stone-200 rounded-xl px-3 py-2 text-xs font-bold text-stone-800 outline-none focus:ring-2 focus:ring-orange-500/20"
+                      className="w-full bg-white border border-stone-200 rounded-xl px-3.5 py-2.5 text-xs md:text-sm font-bold text-stone-800 outline-none focus:ring-2 focus:ring-orange-500/20"
                     />
                   </div>
                   <div>
-                    <label className="text-[9px] font-black text-stone-400 uppercase block mb-1">Priority</label>
+                    <label className="text-[9px] md:text-[10px] font-black text-stone-450 uppercase block mb-1.5">Priority</label>
                     <select
                       value={newTaskPriority}
                       onChange={e => setNewTaskPriority(e.target.value as any)}
-                      className="w-full bg-white border border-stone-200 rounded-xl px-3 py-2 text-xs font-bold text-stone-700 outline-none focus:ring-2 focus:ring-orange-500/20"
+                      className="w-full bg-white border border-stone-200 rounded-xl px-3.5 py-2.5 text-xs md:text-sm font-bold text-stone-700 outline-none focus:ring-2 focus:ring-orange-500/20 cursor-pointer"
                     >
                       <option value="High">High Priority</option>
                       <option value="Medium">Medium Priority</option>
@@ -1316,14 +1316,14 @@ export const DailyPerformanceCheck: React.FC<DailyPerformanceCheckProps> = ({
                   </div>
                 </div>
 
-                <div className="flex justify-between items-center pt-2">
-                  <div className="flex gap-1.5 flex-wrap max-w-[280px]">
+                <div className="flex justify-between items-center pt-2 gap-4 flex-wrap">
+                  <div className="flex gap-2 flex-wrap max-w-[280px]">
                     {PRESET_COLORS.map(col => (
                       <button
                         key={col.value}
                         type="button"
                         onClick={() => setNewTaskColor(col.value)}
-                        className="w-5 h-5 rounded-full border transition-all active:scale-95 hover:scale-110"
+                        className="w-6 h-6 rounded-full border transition-all active:scale-95 hover:scale-110"
                         title={col.name}
                         style={{ 
                           backgroundColor: col.value, 
@@ -1336,7 +1336,7 @@ export const DailyPerformanceCheck: React.FC<DailyPerformanceCheckProps> = ({
 
                   <button
                     onClick={() => handleAddTask()}
-                    className="p-1 px-4 bg-orange-500 hover:bg-orange-600 text-white text-[10px] font-black uppercase tracking-wider rounded-xl transition-all"
+                    className="p-2 px-5 bg-orange-500 hover:bg-orange-600 text-white text-[10px] md:text-xs font-black uppercase tracking-wider rounded-xl transition-all shadow-sm"
                   >
                     Confirm Add
                   </button>
@@ -1345,16 +1345,16 @@ export const DailyPerformanceCheck: React.FC<DailyPerformanceCheckProps> = ({
             )}
 
             {/* Bottom info row: Total completions */}
-            <div className="bg-white md:bg-stone-50 rounded-3xl md:rounded-none border border-stone-150 md:border-none md:border-t md:border-stone-100 p-4 px-6 flex flex-col sm:flex-row items-center justify-between gap-2 shadow-sm md:shadow-none mt-3 md:mt-0">
-              <div className="flex items-center gap-2">
-                <span className="text-[10px] font-black text-stone-400 uppercase tracking-widest block">
+            <div className="bg-white md:bg-stone-50 rounded-3xl md:rounded-none border border-stone-150 md:border-none md:border-t md:border-stone-100 p-4 md:p-6 px-6 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-sm md:shadow-none mt-3 md:mt-0">
+              <div className="flex items-center gap-3">
+                <span className="text-[10px] md:text-xs font-black text-stone-450 uppercase tracking-widest block">
                   Weekly completions:
                 </span>
-                <span className="text-xs bg-white border border-stone-200 rounded-lg px-2.5 py-0.5 font-black text-stone-750">
+                <span className="text-xs md:text-sm bg-white border border-stone-200 rounded-lg px-3 py-1 font-black text-stone-750 shadow-xs">
                   {completedCount} / {totalPossible} checked
                 </span>
               </div>
-              <p className="text-[9px] text-stone-450 font-bold uppercase tracking-wider flex items-center gap-1">
+              <p className="text-[10px] md:text-xs text-stone-500 font-bold uppercase tracking-wider flex items-center gap-1">
                 ☀️ Soft peach & emerald eye-friendly themes (No blue & black)
               </p>
             </div>

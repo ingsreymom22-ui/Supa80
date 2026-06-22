@@ -1,5 +1,7 @@
 import React, { useState, useMemo, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
+import html2pdf from 'html2pdf.js';
+import { toPng } from 'html-to-image';
 import { 
   Plus, 
   Trash2, 
@@ -547,6 +549,11 @@ export const DailyPerformanceCheck: React.FC<DailyPerformanceCheckProps> = ({
   const [newTaskPriority, setNewTaskPriority] = useState<'Low' | 'Medium' | 'High'>('Medium');
   const [isAdding, setIsAdding] = useState(false);
 
+  // Export states
+  const [showExportMenu, setShowExportMenu] = useState(false);
+  const [exportPaperSize, setExportPaperSize] = useState<'a4' | 'letter' | 'a3' | 'legal'>('a4');
+  const dpcRef = useRef<HTMLDivElement>(null);
+
   // Editing state
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState('');
@@ -839,6 +846,78 @@ export const DailyPerformanceCheck: React.FC<DailyPerformanceCheckProps> = ({
     setCurrentWeekStart(startOfWeek(new Date(), { weekStartsOn: 1 }));
   };
 
+  const doExportPDF = () => {
+    if (!dpcRef.current) return;
+    const opt = {
+      margin:       10,
+      filename:     `Daily_Performance_${format(currentWeekStart, 'yyyy-MM-dd')}.pdf`,
+      image:        { type: 'jpeg', quality: 0.98 },
+      html2canvas:  { scale: 2, useCORS: true },
+      jsPDF:        { unit: 'mm', format: exportPaperSize, orientation: 'portrait' }
+    };
+    html2pdf().set(opt).from(dpcRef.current).save();
+    setShowExportMenu(false);
+  };
+
+  const doExportWord = () => {
+    try {
+      if (!dpcRef.current) return;
+      const clone = dpcRef.current.cloneNode(true) as HTMLElement;
+      const ignoreNodes = clone.querySelectorAll('[data-html2canvas-ignore]');
+      ignoreNodes.forEach(node => node.parentNode?.removeChild(node));
+      
+      const htmlContent = clone.innerHTML;
+      const header = `
+        <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
+        <head>
+          <meta charset='utf-8'>
+          <style>
+            body { font-family: 'Inter', sans-serif; background-color: #f8fafc; color: #1e293b; padding: 20px; }
+            * { box-sizing: border-box; }
+            svg { display: none; }
+          </style>
+        </head>
+        <body>
+      `;
+      const sourceHTML = header + htmlContent + "</body></html>";
+      const source = 'data:application/vnd.ms-word;charset=utf-8,' + encodeURIComponent(sourceHTML);
+      const fileDownload = document.createElement("a");
+      document.body.appendChild(fileDownload);
+      fileDownload.href = source;
+      fileDownload.download = `Daily_Performance_${format(currentWeekStart, 'yyyy-MM-dd')}.doc`;
+      fileDownload.click();
+      document.body.removeChild(fileDownload);
+      setShowExportMenu(false);
+    } catch (e) {
+      console.error(e);
+      alert("Failed to export Word");
+    }
+  };
+
+  const doExportImage = async () => {
+    if (!dpcRef.current) return;
+    try {
+      const dataUrl = await toPng(dpcRef.current, { 
+        cacheBust: true, 
+        backgroundColor: '#f8fafc',
+        filter: (node) => {
+          if (node?.hasAttribute && node.hasAttribute('data-html2canvas-ignore')) {
+            return false;
+          }
+          return true;
+        }
+      });
+      const link = document.createElement('a');
+      link.download = `Daily_Performance_${format(currentWeekStart, 'yyyy-MM-dd')}.png`;
+      link.href = dataUrl;
+      link.click();
+      setShowExportMenu(false);
+    } catch (err) {
+      console.error(err);
+      alert('Image export failed.');
+    }
+  };
+
   const filteredAndSortedTasks = useMemo(() => {
     const priorityWeight = { 'High': 3, 'Medium': 2, 'Low': 1 };
     return [...tasks].sort((a, b) => {
@@ -941,7 +1020,7 @@ export const DailyPerformanceCheck: React.FC<DailyPerformanceCheckProps> = ({
 
       {/* 2. Sub-tab Content: Daily planning */}
       {activeSubTab === 'Daily' && (
-        <div className="space-y-4 animate-in fade-in duration-150">
+        <div ref={dpcRef} className="space-y-4 animate-in fade-in duration-150">
           <div className="md:bg-white md:rounded-3xl md:border md:border-stone-200 md:shadow-sm md:overflow-hidden">
             {/* Desktop Checklist Table: Generously spaced & larger for PC view */}
             <div className="hidden md:block overflow-x-auto">
@@ -1346,15 +1425,53 @@ export const DailyPerformanceCheck: React.FC<DailyPerformanceCheckProps> = ({
 
             {/* Bottom info row: Total completions */}
             <div className="bg-white md:bg-stone-50 rounded-3xl md:rounded-none border border-stone-150 md:border-none md:border-t md:border-stone-100 p-4 md:p-6 px-6 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-sm md:shadow-none mt-3 md:mt-0">
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-3 relative">
                 <span className="text-[10px] md:text-xs font-black text-stone-450 uppercase tracking-widest block">
                   Weekly completions:
                 </span>
                 <span className="text-xs md:text-sm bg-white border border-stone-200 rounded-lg px-3 py-1 font-black text-stone-750 shadow-xs">
                   {completedCount} / {totalPossible} checked
                 </span>
+
+                {/* Export Dropdown */}
+                <div className="relative ml-2" data-html2canvas-ignore="true">
+                  <button
+                    onClick={() => setShowExportMenu(!showExportMenu)}
+                    className={`p-1.5 px-3 border text-[10px] font-black uppercase rounded-lg transition-all flex items-center gap-1 ${
+                      showExportMenu 
+                        ? 'bg-orange-500 border-orange-500 text-white shadow-md' 
+                        : 'bg-white border-stone-200 text-stone-600 hover:bg-stone-50'
+                    }`}
+                  >
+                    Export
+                    <svg className={`w-3 h-3 transition-transform ${showExportMenu ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </button>
+                  {showExportMenu && (
+                    <div className="absolute bottom-full left-0 mb-2 w-52 bg-white rounded-xl shadow-xl border border-stone-200 p-2 z-50">
+                      <div className="mb-2 px-2 pt-1">
+                        <label className="text-[9px] font-black uppercase text-stone-400 block mb-1">Paper Size</label>
+                        <select 
+                          className="w-full text-xs font-bold bg-stone-50 border border-stone-200 rounded p-1.5 outline-none text-stone-700 focus:border-orange-400"
+                          value={exportPaperSize}
+                          onChange={(e) => setExportPaperSize(e.target.value as any)}
+                        >
+                          <option value="a4">A4 Size</option>
+                          <option value="a3">A3 Size (Large)</option>
+                          <option value="letter">Letter</option>
+                          <option value="legal">Legal</option>
+                        </select>
+                      </div>
+                      <div className="h-px bg-stone-100 my-1.5 mx-2"></div>
+                      <button onClick={doExportPDF} className="w-full text-left px-3 py-2 text-xs font-bold text-stone-600 hover:bg-orange-50 hover:text-orange-600 rounded-lg transition-colors flex items-center gap-2">📄 Export as PDF</button>
+                      <button onClick={doExportImage} className="w-full text-left px-3 py-2 text-xs font-bold text-stone-600 hover:bg-orange-50 hover:text-orange-600 rounded-lg transition-colors flex items-center gap-2">🖼️ Export as Image</button>
+                      <button onClick={doExportWord} className="w-full text-left px-3 py-2 text-xs font-bold text-stone-600 hover:bg-orange-50 hover:text-orange-600 rounded-lg transition-colors flex items-center gap-2">📝 Export as Word</button>
+                    </div>
+                  )}
+                </div>
               </div>
-              <p className="text-[10px] md:text-xs text-stone-500 font-bold uppercase tracking-wider flex items-center gap-1">
+              <p className="text-[10px] md:text-xs text-stone-500 font-bold uppercase tracking-wider hidden lg:flex items-center gap-1">
                 ☀️ Soft peach & emerald eye-friendly themes (No blue & black)
               </p>
             </div>

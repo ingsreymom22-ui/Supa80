@@ -985,23 +985,25 @@ const App: React.FC = () => {
     expense: ExpenseEntry,
     isDelete: boolean = false,
   ) => {
-    let newExpenses = [...(data.expenses || [])];
-    if (isDelete) {
-      newExpenses = newExpenses.filter((e) => e.id !== expense.id);
-    } else {
-      const exists = newExpenses.find((e) => e.id === expense.id);
-      if (exists) {
-        newExpenses = newExpenses.map((e) =>
-          e.id === expense.id ? expense : e,
-        );
+    setData((prevData) => {
+      let newExpenses = [...(prevData.expenses || [])];
+      if (isDelete) {
+        newExpenses = newExpenses.filter((e) => e.id !== expense.id);
       } else {
-        newExpenses = [expense, ...newExpenses];
+        const exists = newExpenses.find((e) => e.id === expense.id);
+        if (exists) {
+          newExpenses = newExpenses.map((e) =>
+            e.id === expense.id ? expense : e,
+          );
+        } else {
+          newExpenses = [expense, ...newExpenses];
+        }
       }
-    }
 
-    const newData = { ...data, expenses: newExpenses };
-    setData(newData);
-    storage.setItem("dps_data", JSON.stringify(newData));
+      const newData = { ...prevData, expenses: newExpenses };
+      storage.setItem("dps_data", JSON.stringify(newData));
+      return newData;
+    });
 
     if (currentUser?.uid) {
       const { saveExpense } = await import("./services/supabase");
@@ -1286,14 +1288,14 @@ const App: React.FC = () => {
         <SupermanAnimation students={data.students} />
 
         <main
-          className="flex-1 flex flex-col overflow-y-auto md:overflow-hidden transition-transform duration-300 origin-top-left bg-white/[0.01] backdrop-blur-md"
+          className={`flex-1 flex flex-col ${[Tab.SelfLearning, Tab.NoteTaking, Tab.DPSS].includes(activeTab) ? 'overflow-hidden' : 'overflow-y-auto'} md:overflow-hidden transition-transform duration-300 origin-top-left bg-white/[0.01] backdrop-blur-md`}
           style={{
             transform: `scale(${globalScale})`,
             width: `${100 / globalScale}%`,
             height: `${100 / globalScale}%`,
           }}
         >
-          <div className="flex-1 flex flex-col pt-16 md:pt-0 overflow-visible md:overflow-hidden h-full min-h-0 w-full">
+          <div className={`flex-1 flex flex-col ${[Tab.NoteTaking, Tab.SelfLearning, Tab.DPSS].includes(activeTab) ? 'pt-0' : 'pt-16 md:pt-0'} overflow-visible md:overflow-hidden h-full min-h-0 w-full`}>
             <>
               {activeTab === Tab.AdvancedHabitTracker && (
                 <AdvancedHabitTracker data={data} onUpdate={handleUpdate} />

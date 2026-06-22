@@ -4326,36 +4326,35 @@ export const DPSSTable: React.FC<DPSSTableProps> = ({ data, onUpdate, onUpdateTo
       </div>
 
       {/* Editor Area */}
-      <div className={`flex-1 bg-transparent rounded-3xl p-4 md:p-6 border border-white/20 relative overflow-hidden flex flex-col ${!isSidebarOpen ? 'w-full' : 'hidden md:flex'}`}>
+      <div className={`flex-1 bg-transparent rounded-3xl p-2 pt-4 md:p-6 md:pt-4 border border-white/20 relative flex flex-col h-full ${!isSidebarOpen ? 'w-full' : 'hidden md:flex'}`}>
         {!isSidebarOpen && (
           <button 
             onClick={() => setIsSidebarOpen(true)}
-            className="fixed left-20 top-4 z-[100] md:absolute md:left-20 md:top-4 md:z-[100] p-3 bg-orange-500 text-white rounded-xl shadow-lg hover:bg-orange-600 transition-all active:scale-95 flex items-center justify-center"
+            className="fixed left-14 top-4 z-[100] w-8 h-8 md:absolute md:left-4 md:top-4 md:z-[100] bg-orange-500 text-white rounded-lg shadow-lg hover:bg-orange-600 transition-all active:scale-95 flex items-center justify-center"
           >
-            <Menu size={24} />
+            <Menu size={16} />
           </button>
         )}
         {selectedTopic ? (
-            <div className="space-y-4 h-full flex flex-col">
-                <div className="flex items-center gap-2 md:gap-4 px-2 mt-2 md:mt-0">
-                  {!isSidebarOpen && <div className="w-12 md:hidden shrink-0" />} {/* Spacer for the absolute menu button */}
+            <div className="space-y-4 h-full flex flex-col relative pt-12 md:pt-14">
+                <div className="flex items-center gap-2 px-1 min-h-12 absolute -top-1 md:top-2 left-[82px] md:left-[80px] right-0 z-[200]">
                   <input 
                       value={selectedTopic.title} 
                       onChange={(e) => updateTopic(selectedTopic.id, { title: e.target.value })}
-                      className={`flex-1 text-2xl md:text-4xl font-black text-slate-900 border-slate-300 bg-white/40 backdrop-blur-sm shadow-sm drop-shadow-sm outline-none p-2 border-b-2 focus:border-orange-500 focus:text-slate-900 focus:bg-white focus:shadow-md transition-all min-w-0 text-center uppercase tracking-wide rounded-t-xl`}
+                      className={`flex-1 text-xl md:text-3xl font-black text-slate-900 border-slate-300 bg-white/40 backdrop-blur-sm shadow-sm drop-shadow-sm outline-none px-3 py-1.5 border-b-2 focus:border-orange-500 focus:text-slate-900 focus:bg-white focus:shadow-md transition-all font-sans min-w-0 text-center uppercase tracking-wide rounded-t-xl`}
                       placeholder="Topic Title..."
                   />
                   <button
                     onClick={() => setIsToolbarHidden(!isToolbarHidden)}
-                    className={`p-2 shrink-0 ${isToolbarHidden ? 'bg-orange-100 text-orange-600 hover:bg-orange-200' : 'bg-white/50 text-slate-500 hover:bg-white'} rounded-xl transition-all shadow-sm`}
+                    className={`p-2.5 shrink-0 ${isToolbarHidden ? 'bg-orange-100/80 text-orange-600 hover:bg-orange-200' : 'bg-white/50 text-slate-500 hover:bg-white'} rounded-xl transition-all shadow-sm`}
                     title={isToolbarHidden ? "Show Toolbar" : "Full Screen (Hide Toolbar)"}
                   >
-                    {isToolbarHidden ? <Minimize2 size={18} /> : <Maximize2 size={18} />}
+                    {isToolbarHidden ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
                   </button>
                 </div>
                 
                 {!isToolbarHidden && (
-                  <div className="flex flex-col gap-2 p-2 border-b border-white/20 sticky top-0 bg-white/30 backdrop-blur-xl z-20 rounded-xl">
+                  <div className="flex flex-col gap-2 p-2 border-b border-white/20 sticky top-0 bg-white/50 backdrop-blur-xl z-20 rounded-xl overflow-y-auto max-h-[35vh] md:max-h-none flex-shrink-0 shadow-sm scrollbar-thin scrollbar-thumb-slate-300">
                     {/* Row 1: Core Controls */}
                     <div className="flex flex-wrap gap-2 items-center">
                       <div className="flex gap-1 bg-white/40 p-1 rounded-lg shrink-0 items-center">
@@ -5417,7 +5416,7 @@ export const DPSSTable: React.FC<DPSSTableProps> = ({ data, onUpdate, onUpdateTo
                 })()}
 
                 {/* Relative Wrapper for Editor + Ruler Guides */}
-                <div className="relative flex flex-col w-full flex-1 min-h-0">
+                <div className="relative flex flex-col w-full flex-1 min-h-0 overflow-y-auto editor-scrollbar">
                   
                   {/* Modern Word-style Horizontal Page Ruler */}
                   {showRuler && (

@@ -410,22 +410,22 @@ export const ExpenseTracker: React.FC<ExpenseTrackerProps> = ({ data, onUpdate, 
     return <Tag size={15} className="text-slate-400" />;
   };
 
-  // Dynamic suggestions of amounts & full entries based on previous 5 days (including today)
+  // Dynamic suggestions of amounts & full entries based on previous 7 days (including today)
   const previousDaysSuggestions = useMemo(() => {
     const now = new Date();
     const startOfToday = startOfDay(now);
 
-    // Look at records from last 5 days to capture everything
-    const fiveDaysAgo = startOfDay(new Date(now.getTime() - 5 * 24 * 60 * 60 * 1000));
+    // Look at records from last 7 days to capture everything
+    const sevenDaysAgo = startOfDay(new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000));
     const endOfToday = endOfDay(now);
 
     let recent = expenses.filter(e => {
       if (!e || !e.date || !isValidDate(e.date)) return false;
       const eDate = new Date(e.date);
-      return eDate >= fiveDaysAgo && eDate <= endOfToday;
+      return eDate >= sevenDaysAgo && eDate <= endOfToday;
     });
 
-    // Fallback: if no records in the past 5 days, take up to 20 recent historical records (excluding today)
+    // Fallback: if no records in the past 7 days, take up to 30 recent historical records (excluding today)
     if (recent.length === 0) {
       recent = expenses.filter(e => {
         if (!e || !e.date || !isValidDate(e.date)) return false;
@@ -434,12 +434,12 @@ export const ExpenseTracker: React.FC<ExpenseTrackerProps> = ({ data, onUpdate, 
         } catch (err) {
           return false;
         }
-      }).slice(0, 20);
+      }).slice(0, 30);
     }
 
     // Secondary Fallback: if even that is empty (e.g. clean DB), take whatever is there
     if (recent.length === 0) {
-      recent = expenses.slice(0, 20);
+      recent = expenses.slice(0, 30);
     }
 
     // 1. Get unique amounts + currencies
@@ -458,7 +458,7 @@ export const ExpenseTracker: React.FC<ExpenseTrackerProps> = ({ data, onUpdate, 
 
     const amounts = Array.from(amountMap.values())
       .sort((a, b) => b.count - a.count)
-      .slice(0, 6)
+      .slice(0, 8)
       .map(entry => ({ amount: entry.amount, currency: entry.currency }));
 
     // 2. Get unique full entry suggestions for Smart Add (e.g., "Rice 3000R" or "Coffee 1$")
@@ -480,7 +480,7 @@ export const ExpenseTracker: React.FC<ExpenseTrackerProps> = ({ data, onUpdate, 
 
     const entries = Array.from(entriesMap.values())
       .sort((a, b) => b.count - a.count)
-      .slice(0, 15) // Suggest all from last 5 days
+      .slice(0, 30) // Suggest all from last 7 days
       .map(e => ({ label: e.label, text: e.text }));
 
     return { amounts, entries };
@@ -1143,51 +1143,60 @@ export const ExpenseTracker: React.FC<ExpenseTrackerProps> = ({ data, onUpdate, 
     const input = smartInput.trim();
     if (!input) return;
 
-    let foundCategory = categories.find(c => c && typeof c === 'string' && c.toLowerCase() === 'others') || categories[0] || 'Others';
-    let amountStr = '';
+    const entries = input.split(/[,;]+/).map(e => e.trim()).filter(e => e);
+    const newExpenses: ExpenseEntry[] = [];
 
-    const parts = input.split(' ');
-    if (parts.length >= 2) {
-      const firstPart = parts[0].toLowerCase();
-      const match = categories.find(c => c && typeof c === 'string' && c.toLowerCase() === firstPart);
-      if (match) {
-        foundCategory = match;
-        amountStr = parts.slice(1).join('').trim();
-      } else {
-        const lastPart = parts[parts.length - 1].toLowerCase();
-        const possibleAmount = parseEntry(lastPart);
-        if (!isNaN(possibleAmount.amount)) {
-          amountStr = lastPart;
-          foundCategory = parts.slice(0, parts.length - 1).join(' ').trim();
-          const matchExisting = categories.find(c => c && typeof c === 'string' && foundCategory && typeof foundCategory === 'string' && c.toLowerCase() === foundCategory.toLowerCase());
-          if (matchExisting) foundCategory = matchExisting;
+    for (const entryStr of entries) {
+      let foundCategory = categories.find(c => c && typeof c === 'string' && c.toLowerCase() === 'others') || categories[0] || 'Others';
+      let amountStr = '';
+
+      const parts = entryStr.split(' ');
+      if (parts.length >= 2) {
+        const firstPart = parts[0].toLowerCase();
+        const match = categories.find(c => c && typeof c === 'string' && c.toLowerCase() === firstPart);
+        if (match) {
+          foundCategory = match;
+          amountStr = parts.slice(1).join('').trim();
+        } else {
+          const lastPart = parts[parts.length - 1].toLowerCase();
+          const possibleAmount = parseEntry(lastPart);
+          if (!isNaN(possibleAmount.amount)) {
+            amountStr = lastPart;
+            foundCategory = parts.slice(0, parts.length - 1).join(' ').trim();
+            const matchExisting = categories.find(c => c && typeof c === 'string' && foundCategory && typeof foundCategory === 'string' && c.toLowerCase() === foundCategory.toLowerCase());
+            if (matchExisting) foundCategory = matchExisting;
+          }
         }
       }
+
+      if (!amountStr) {
+          amountStr = entryStr;
+      }
+
+      const { amount, currency } = parseEntry(amountStr);
+      if (isNaN(amount) || amount <= 0) continue;
+
+      const expense: ExpenseEntry = {
+        id: uuidv4(),
+        description: foundCategory,
+        amount: amount,
+        category: foundCategory,
+        type: 'Expense',
+        currency: currency,
+        date: selectedDate.toISOString()
+      };
+      
+      newExpenses.push(expense);
     }
-
-    if (!amountStr) {
-        amountStr = input;
-    }
-
-    const { amount, currency } = parseEntry(amountStr);
-    if (isNaN(amount) || amount <= 0) return;
-
-    const expense: ExpenseEntry = {
-      id: uuidv4(),
-      description: foundCategory,
-      amount: amount,
-      category: foundCategory,
-      type: 'Expense',
-      currency: currency,
-      date: selectedDate.toISOString()
-    };
+    
+    if (newExpenses.length === 0) return;
 
     if (onUpdateExpense) {
-      onUpdateExpense(expense);
+      newExpenses.forEach(exp => onUpdateExpense(exp));
     } else {
       onUpdate({
         ...data,
-        expenses: [expense, ...expenses]
+        expenses: [...newExpenses.reverse(), ...expenses]
       });
     }
 
@@ -2071,7 +2080,7 @@ export const ExpenseTracker: React.FC<ExpenseTrackerProps> = ({ data, onUpdate, 
               <div className="flex items-center gap-3">
                 <input 
                     type="text"
-                    placeholder="Quick input... (e.g. Espresso 3.50$)"
+                    placeholder="Quick input... (e.g. Espresso 3.50; Bus 2$)"
                     value={smartInput}
                     onChange={(e) => setSmartInput(e.target.value)}
                     onKeyDown={(e) => e.key === 'Enter' && handleSmartAdd()}
@@ -2087,22 +2096,38 @@ export const ExpenseTracker: React.FC<ExpenseTrackerProps> = ({ data, onUpdate, 
               </div>
               <div className="flex flex-wrap items-center gap-1.5 px-1">
                  <span className="text-[8px] font-black uppercase text-slate-400 tracking-wider mr-1">
-                   {previousDaysSuggestions.entries.length > 0 ? '✨ Recent (Last 3 days):' : 'Examples:'}
+                   {previousDaysSuggestions.entries.length > 0 ? '✨ Recent (Last 7 days):' : 'Examples:'}
                  </span>
-                 {(previousDaysSuggestions.entries.length > 0 ? previousDaysSuggestions.entries : [
-                   { label: '☕ Coffee 3.5$', text: 'Coffee 3.5$' },
-                   { label: '🍕 Food 12$', text: 'Food 12$' },
-                   { label: '⛽ Gas 10000R', text: 'Gas 10000R' },
-                   { label: '💰 Salary 1500$ Income', text: 'Salary 1500$ Income' }
-                 ]).map(chip => (
-                   <button
-                     key={chip.label}
-                     onClick={() => setSmartInput(chip.text)}
-                     className="px-2.5 py-1 bg-white/70 hover:bg-white dark:bg-slate-800 dark:hover:bg-slate-700 border border-slate-100 dark:border-slate-700/60 rounded-xl text-[9px] font-bold text-slate-600 dark:text-slate-400 hover:text-amber-600 dark:hover:text-amber-500 transition-colors shadow-sm animate-in fade-in"
-                   >
-                     {chip.label}
-                   </button>
-                 ))}
+                 {(() => {
+                   const displayEntries = [...previousDaysSuggestions.entries];
+                   const defaultSamples = [
+                     { label: '⛽ Gas 10000R', text: 'Gas 10000R' },
+                     { label: '☕ Coffee 3.5$', text: 'Coffee 3.5$' },
+                     { label: '🍕 Food 12$', text: 'Food 12$' },
+                     { label: '💰 Salary 1500$ Income', text: 'Salary 1500$ Income' }
+                   ];
+                   let i = 0;
+                   while (displayEntries.length < 4 && i < defaultSamples.length) {
+                     if (!displayEntries.find(e => e.label.includes(defaultSamples[i].text.split(' ')[0]) || e.text.includes(defaultSamples[i].text.split(' ')[0]))) {
+                       displayEntries.push(defaultSamples[i]);
+                     }
+                     i++;
+                   }
+                   return displayEntries.map(chip => (
+                     <button
+                       key={chip.label}
+                       onClick={() => setSmartInput(prev => {
+                         const t = prev.trim();
+                         if (!t) return chip.text + '; ';
+                         if (t.endsWith(';') || t.endsWith(',')) return t + ' ' + chip.text + '; ';
+                         return t + '; ' + chip.text + '; ';
+                       })}
+                       className="px-2.5 py-1 bg-white/70 hover:bg-white dark:bg-slate-800 dark:hover:bg-slate-700 border border-slate-100 dark:border-slate-700/60 rounded-xl text-[9px] font-bold text-slate-600 dark:text-slate-400 hover:text-amber-600 dark:hover:text-amber-500 transition-colors shadow-sm animate-in fade-in"
+                     >
+                       {chip.label}
+                     </button>
+                   ));
+                 })()}
                  {previousDaysSuggestions.entries.length > 0 && (
                    <span className="text-[8px] font-black text-amber-500 bg-amber-500/10 px-1.5 py-0.5 rounded italic mt-0.5 lg:mt-0 xl:mt-0">
                      Smart Recommendations
@@ -2315,7 +2340,7 @@ export const ExpenseTracker: React.FC<ExpenseTrackerProps> = ({ data, onUpdate, 
                                 {/* Dynamic suggestions from previous 3 days */}
                                 {previousDaysSuggestions.amounts.length > 0 && (
                                   <div className="mt-4 px-2">
-                                    <p className="text-[9px] font-black uppercase tracking-widest text-slate-900/40 mb-2 ml-1">✨ Recent Custom (Last 3 days):</p>
+                                    <p className="text-[9px] font-black uppercase tracking-widest text-slate-900/40 mb-2 ml-1">✨ Recent Custom (Last 7 days):</p>
                                     <div className="flex flex-wrap gap-2">
                                       {previousDaysSuggestions.amounts.map((s, i) => (
                                         <button

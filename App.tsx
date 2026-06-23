@@ -644,8 +644,8 @@ const App: React.FC = () => {
           
           if (hasUnsavedLocalState || hasUnsavedChangesRef.current || isSyncingRef.current || currentLocalStr !== incomingStr) {
             // If the update came while we are working or if it's already "old" compared to current local state, ignore it.
-            const wasRecentlyUpdated = Date.now() - lastLocalUpdateRef.current < 3000; // 3s window is enough for debounce
-            if (wasRecentlyUpdated || hasUnsavedChangesRef.current) {
+            const wasRecentlyUpdated = Date.now() - lastLocalUpdateRef.current < 4000; // 4s window is enough for debounce
+            if (wasRecentlyUpdated || hasUnsavedChangesRef.current || isSyncingRef.current || hasUnsavedLocalState) {
               return;
             }
           }

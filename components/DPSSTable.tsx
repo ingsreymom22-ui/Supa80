@@ -35,7 +35,7 @@ const STATIC_FONT_FAMILIES = [
 
 interface DPSSTableProps {
   data: AppData;
-  onUpdate: (data: AppData) => void;
+  onUpdate: (data: AppData | ((prev: AppData) => AppData)) => void;
   onUpdateTopic?: (updatedTopics: DPSSTopic[], topicToSave?: DPSSTopic) => void;
   onOpenSidebar?: () => void;
 }
@@ -321,6 +321,21 @@ export const DPSSTable: React.FC<DPSSTableProps> = ({ data, onUpdate, onUpdateTo
       clearTimeout(t3);
     };
   }, [data, sidebarFilter, searchTerm, isSidebarOpen, expandedTopics]);
+
+  const inputTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const handleEditorInput = (e: React.FormEvent<HTMLDivElement>) => {
+    if (inputTimeoutRef.current) clearTimeout(inputTimeoutRef.current);
+    inputTimeoutRef.current = setTimeout(() => {
+      if (editorRef.current && selectedTopic) {
+        // Only trigger update if the content has actually changed to avoid unnecessary saves
+        const currentHtml = editorRef.current.innerHTML;
+        if (currentHtml !== selectedTopic.content) {
+          updateTopic(selectedTopic.id, { content: currentHtml });
+        }
+      }
+    }, 500);
+  };
 
   const exportPDF = async (customStyle?: 'executive' | 'handwritten' | 'minimalist' | 'academic' | 'retro' | 'medium_bg' | 'light_bg' | 'no_bg') => {
     if (!editorRef.current) return;
@@ -5630,6 +5645,7 @@ export const DPSSTable: React.FC<DPSSTableProps> = ({ data, onUpdate, onUpdateTo
                       onFocus={handleEditorFocus}
                       onClick={handleEditorClick}
                       onPaste={handleEditorPaste}
+                      onInput={handleEditorInput}
                       onMouseUp={handleSelection}
                       onKeyUp={handleSelection}
                       onKeyDown={handleEditorKeyDown}

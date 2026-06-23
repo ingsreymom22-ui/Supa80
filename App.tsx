@@ -1288,14 +1288,14 @@ const App: React.FC = () => {
         <SupermanAnimation students={data.students} />
 
         <main
-          className={`flex-1 flex flex-col ${[Tab.SelfLearning, Tab.NoteTaking, Tab.DPSS].includes(activeTab) ? 'overflow-hidden' : 'overflow-y-auto'} md:overflow-hidden transition-transform duration-300 origin-top-left bg-white/[0.01] backdrop-blur-md`}
+          className={`flex-1 flex flex-col ${[Tab.SelfLearning, Tab.DPSS].includes(activeTab) ? 'overflow-hidden' : 'overflow-y-auto'} md:overflow-hidden transition-transform duration-300 origin-top-left bg-white/[0.01] backdrop-blur-md`}
           style={{
             transform: `scale(${globalScale})`,
             width: `${100 / globalScale}%`,
             height: `${100 / globalScale}%`,
           }}
         >
-          <div className={`flex-1 flex flex-col ${[Tab.NoteTaking, Tab.SelfLearning, Tab.DPSS].includes(activeTab) ? 'pt-0' : 'pt-16 md:pt-0'} overflow-visible md:overflow-hidden h-full min-h-0 w-full`}>
+          <div className={`flex-1 flex flex-col ${[Tab.SelfLearning, Tab.DPSS].includes(activeTab) ? 'pt-0' : 'pt-16 md:pt-0'} overflow-visible md:overflow-hidden h-full min-h-0 w-full`}>
             <>
               {activeTab === Tab.AdvancedHabitTracker && (
                 <AdvancedHabitTracker data={data} onUpdate={handleUpdate} />

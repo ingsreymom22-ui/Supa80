@@ -2757,9 +2757,57 @@ export const SelfLearningTable: React.FC<SelfLearningTableProps> = ({ data, onUp
     }
   };
 
+  // --- CURSOR NORMALIZATION UTILITIES ---
+  const normalizeEditorSelection = () => {
+    if (!editorRef.current) return;
+    const selection = window.getSelection();
+    if (!selection || selection.rangeCount === 0) return;
+    
+    const range = selection.getRangeAt(0);
+    const container = range.startContainer;
+
+    // If focus is directly on the editor div or a line container, push it into a text node
+    if (container === editorRef.current || (container.nodeType === Node.ELEMENT_NODE && ['LI', 'DIV', 'P'].includes((container as HTMLElement).tagName))) {
+      const target = container.nodeType === Node.ELEMENT_NODE ? (container as HTMLElement) : container.parentElement;
+      if (target) {
+        // Find first text node or create one if empty
+        const walk = document.createTreeWalker(target, NodeFilter.SHOW_TEXT, null);
+        const textNode = walk.nextNode();
+        if (textNode) {
+          const newRange = document.createRange();
+          newRange.setStart(textNode, textNode.textContent?.length || 0);
+          newRange.collapse(true);
+          selection.removeAllRanges();
+          selection.addRange(newRange);
+        } else {
+           // If no text node, create a break or space span to catch focus
+           const span = document.createElement('span');
+           span.innerHTML = '&#8203;'; // Zero width space
+           target.appendChild(span);
+           const newRange = document.createRange();
+           newRange.selectNodeContents(span);
+           newRange.collapse(false);
+           selection.removeAllRanges();
+           selection.addRange(newRange);
+        }
+      }
+    }
+  };
+
+  const handleEditorFocus = () => {
+    // When editor gains focus, ensure the cursor is in a sane place (not just on the container)
+    setTimeout(normalizeEditorSelection, 1)
+  };
+
   const handleEditorClick = (e: React.MouseEvent) => {
     checkActiveTableCell();
     const target = e.target as HTMLElement;
+    
+    // Normalize focus if clicking on the container but not a child
+    if (target === editorRef.current) {
+        normalizeEditorSelection();
+    }
+
     const anchor = target.closest('a');
     if (anchor) {
       e.preventDefault();
@@ -3117,19 +3165,23 @@ export const SelfLearningTable: React.FC<SelfLearningTableProps> = ({ data, onUp
               
               newLi.appendChild(newCheckbox);
               
-              const textNode = document.createTextNode('');
-              newLi.appendChild(textNode);
+              const textSpan = document.createElement('span');
+              textSpan.className = 'editor-text-node';
+              textSpan.innerHTML = '&#8203;'; // Zero-width space instead of &nbsp; for cleaner typing
+              newLi.appendChild(textSpan);
               
               const parentUl = li.parentElement;
               if (parentUl) {
                 parentUl.insertBefore(newLi, li.nextSibling);
                 
                 const newRange = document.createRange();
-                newRange.setStartAfter(newCheckbox);
-                newRange.setEndAfter(newCheckbox);
-                newRange.collapse(true);
+                newRange.selectNodeContents(textSpan);
+                newRange.collapse(false); // Go to the end of the zero-width space
                 selection.removeAllRanges();
                 selection.addRange(newRange);
+                
+                // Force focus
+                editorRef.current?.focus();
                 
                 setTimeout(() => {
                   updateTopic(selectedTopic.id, { content: editorRef.current?.innerHTML || '' });
@@ -6125,6 +6177,7 @@ export const SelfLearningTable: React.FC<SelfLearningTableProps> = ({ data, onUp
                   <div 
                       ref={editorRef}
                       contentEditable={true}
+                      onFocus={handleEditorFocus}
                       onClick={handleEditorClick}
                       onPaste={handleEditorPaste}
                       onMouseUp={handleSelection}

@@ -237,7 +237,18 @@ const App: React.FC = () => {
   const [redoStack, setRedoStack] = useState<AppData[]>([]);
   const [showSyncToast, setShowSyncToast] = useState(false);
 
-  const [activeTab, setActiveTab] = useState<Tab>(Tab.DailyPerformanceCheck);
+  const [activeTab, setActiveTab] = useState<Tab>(() => {
+    try {
+      const saved = localStorage.getItem('dps_active_tab');
+      if (saved && Object.values(Tab).includes(saved as Tab)) return saved as Tab;
+    } catch {}
+    return Tab.DailyPerformanceCheck;
+  });
+
+  useEffect(() => {
+    localStorage.setItem('dps_active_tab', activeTab);
+  }, [activeTab]);
+
   const [isSidebarOpen, setIsSidebarOpen] = useState(() => {
     const stored = localStorage.getItem("dps_sidebar_open");
     if (stored !== null) return stored === "true";
@@ -250,7 +261,18 @@ const App: React.FC = () => {
   const [isAiOpen, setIsAiOpen] = useState(false);
   const [isContactsOpen, setIsContactsOpen] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [viewMode, setViewMode] = useState<ViewMode>("Default");
+  const [viewMode, setViewMode] = useState<ViewMode>(() => {
+    try {
+      const saved = localStorage.getItem("dps_view_mode");
+      if (saved) return saved as ViewMode;
+    } catch {}
+    return "Default";
+  });
+
+  useEffect(() => {
+    localStorage.setItem("dps_view_mode", viewMode);
+  }, [viewMode]);
+
   const [globalScale, setGlobalScale] = useState(1);
 
   // Note/Folder Sharing states

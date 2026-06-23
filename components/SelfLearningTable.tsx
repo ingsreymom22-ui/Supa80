@@ -4913,7 +4913,11 @@ export const SelfLearningTable: React.FC<SelfLearningTableProps> = ({ data, onUp
       </div>
 
       {/* Editor Area */}
-      <div className={`flex-1 bg-transparent rounded-3xl p-2 pt-4 md:p-6 md:pt-4 border border-white/20 relative flex flex-col h-full ${!isSidebarOpen ? 'w-full' : 'hidden md:flex'}`}>
+      <div className={`flex-1 rounded-[1.5rem] p-2 pt-4 md:p-6 md:pt-4 border border-white/20 relative flex flex-col h-full shadow-2xl ${!isSidebarOpen ? 'w-full' : 'hidden md:flex'} ${
+        forceLightBg
+          ? 'bg-[#fcfdfd] border border-slate-200 text-slate-800'
+          : selectedPaper.className
+      }`}>
         {!isSidebarOpen && (
           <button 
             onClick={() => setIsSidebarOpen(true)}
@@ -4924,16 +4928,16 @@ export const SelfLearningTable: React.FC<SelfLearningTableProps> = ({ data, onUp
         )}
         {selectedTopic ? (
             <div className="space-y-4 h-full flex flex-col relative pt-12 md:pt-14">
-                <div className="flex items-center gap-2 px-1 min-h-12 absolute -top-1 md:top-2 left-24 md:left-[80px] right-0 z-[200]">
+                <div className="flex items-center gap-2 px-1 min-h-12 absolute -top-1 md:top-2 left-24 md:left-[80px] right-0 z-[200] pointer-events-none">
                   <input 
                       value={selectedTopic.title} 
                       onChange={(e) => updateTopic(selectedTopic.id, { title: e.target.value })}
-                      className={`flex-1 text-xl md:text-3xl font-black text-slate-900 border-slate-300 bg-white/40 backdrop-blur-sm shadow-sm drop-shadow-sm outline-none px-3 py-1.5 border-b-2 focus:border-emerald-500 focus:text-slate-900 focus:bg-white focus:shadow-md transition-all font-sans min-w-0 text-center uppercase tracking-wide rounded-t-xl`}
+                      className={`flex-1 text-xl md:text-3xl font-black text-slate-900 border-slate-300/50 pointer-events-auto bg-transparent outline-none px-3 py-1.5 border-b-2 focus:border-emerald-500 focus:text-slate-900 hover:bg-white/20 focus:bg-white/60 focus:backdrop-blur-sm transition-all font-sans min-w-0 text-center uppercase tracking-wide rounded-t-xl`}
                       placeholder="Topic Title..."
                   />
                   <button
                     onClick={() => setIsToolbarHidden(!isToolbarHidden)}
-                    className={`p-2.5 shrink-0 ${isToolbarHidden ? 'bg-emerald-100/80 text-emerald-600 hover:bg-emerald-200' : 'bg-white/50 text-slate-500 hover:bg-white'} rounded-xl transition-all shadow-sm`}
+                    className={`p-2.5 shrink-0 pointer-events-auto ${isToolbarHidden ? 'bg-emerald-100/80 text-emerald-600 hover:bg-emerald-200' : 'bg-transparent text-slate-500 hover:bg-white/20'} rounded-xl transition-all shadow-sm`}
                     title={isToolbarHidden ? "Show Toolbar" : "Full Screen (Hide Toolbar)"}
                   >
                     {isToolbarHidden ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
@@ -4941,7 +4945,7 @@ export const SelfLearningTable: React.FC<SelfLearningTableProps> = ({ data, onUp
                 </div>
                 
                 {!isToolbarHidden && (
-                  <div className="flex flex-col gap-2 p-2 border-b border-white/20 sticky top-0 bg-white/50 backdrop-blur-xl z-20 rounded-xl overflow-y-auto max-h-[35vh] md:max-h-none flex-shrink-0 shadow-sm scrollbar-thin scrollbar-thumb-slate-300">
+                  <div className="flex flex-col gap-2 p-2 border-b border-black/5 sticky top-0 bg-transparent z-20 rounded-xl overflow-y-auto max-h-[35vh] md:max-h-none flex-shrink-0 scrollbar-thin scrollbar-thumb-slate-300">
                     {/* Row 1: Times New Romans (Font Family), Font Size, Topic Paper Style, Do / Undo / Option */}
                     <div className="flex flex-wrap gap-2 items-center justify-between pb-2 border-b border-white/10">
                       <div className="flex flex-wrap gap-2 items-center">
@@ -6308,11 +6312,7 @@ export const SelfLearningTable: React.FC<SelfLearningTableProps> = ({ data, onUp
                         fontSize: `${selectedTopic?.textFontSize || textFontSize}px`,
                         fontFamily: selectedTopic?.textFontFamily || textFontFamily
                       }}
-                      className={`editor-content editor-scrollbar w-full flex-1 outline-none p-8 rounded-3xl leading-relaxed font-medium transition-all focus:ring-4 focus:ring-emerald-500/10 shadow-md ${
-                        forceLightBg
-                          ? 'bg-[#fcfdfd] border border-slate-200 text-slate-800 shadow-2xl'
-                          : selectedPaper.className
-                      }`}
+                      className={`editor-content editor-scrollbar w-full flex-1 outline-none p-8 leading-relaxed font-medium transition-all focus:ring-4 focus:ring-emerald-500/10 bg-transparent`}
                   ></div>
                 </div>
 

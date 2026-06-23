@@ -7,6 +7,23 @@ import { PAPER_STYLES } from '../src/styles/paperStyles';
 // @ts-ignore
 import html2pdf from 'html2pdf.js';
 
+const OUTLINE_STYLES = [
+  { label: '1, 2, 3...', value: 'decimal' },
+  { label: '01, 02, 03...', value: 'decimal-leading-zero' },
+  { label: 'A, B, C...', value: 'upper-alpha' },
+  { label: 'a, b, c...', value: 'lower-alpha' },
+  { label: 'I, II, III...', value: 'upper-roman' },
+  { label: 'i, ii, iii...', value: 'lower-roman' },
+];
+
+const BULLET_STYLES = [
+  '•', '🌹', '⭐', '🚗', '❤️', '✅', '✨', '🔥', '🔮', '🍃', '🎵', '👑', '☀️', '🌙', '💎', '📌', '👥', '⏳', '💡', '🏃', '🥑', '💧', '💪', '🍎', '⚡', '🌿', '📚', '👉', '🚀', '🎯', '▶', '🟢', '💠', '🔹', '🔸', '🚩', '🏁', '①', '②', '③', '❶', '❷', '❸'
+];
+
+const CHECKLIST_STYLES = [
+  '⬜', '✅', '☑️', '✓', '❌', '✗', '⭕', '🔘', '🟩', '🔴'
+];
+
 const STATIC_FONT_FAMILIES = [
   { name: 'Times New Roman', value: '"Times New Roman", Times, serif' },
   { name: 'Modern', value: 'Inter' },
@@ -213,6 +230,7 @@ export const DPSSTable: React.FC<DPSSTableProps> = ({ data, onUpdate, onUpdateTo
   const [pdfPaperStyle, setPdfPaperStyle] = useState('none');
   const [showTableToolsMenu, setShowTableToolsMenu] = useState(false);
   const [showPageOptions, setShowPageOptions] = useState(false);
+  const [showListStyleMenu, setShowListStyleMenu] = useState<'bullet' | 'number' | 'check' | null>(null);
 
   const toggleDropdown = (menuName: 'export' | 'tableTools' | 'more' | 'moreTools' | 'pageOptions') => {
     setShowExportMenu(menuName === 'export' ? !showExportMenu : false);
@@ -220,6 +238,7 @@ export const DPSSTable: React.FC<DPSSTableProps> = ({ data, onUpdate, onUpdateTo
     setShowMoreMenu(menuName === 'more' ? !showMoreMenu : false);
     setShowMoreTools(menuName === 'moreTools' ? !showMoreTools : false);
     setShowPageOptions(menuName === 'pageOptions' ? !showPageOptions : false);
+    if (menuName === 'moreTools') setShowListStyleMenu(null);
   };
 
   // Global click outside to dismiss menus
@@ -2714,6 +2733,27 @@ export const DPSSTable: React.FC<DPSSTableProps> = ({ data, onUpdate, onUpdateTo
     }
   };
 
+  const insertListStyle = (type: 'bullet' | 'number' | 'check', marker?: string) => {
+    if (!editorRef.current || !selectedTopic) return;
+    let html = '';
+    
+    if (type === 'check') {
+        const checkboxMarker = marker || '⬜';
+        html = `<ul style="list-style-type: none; padding-left: 0; margin-top: 4px; margin-bottom: 4px;"><li style="display: flex; gap: 8px; align-items: flex-start;"><span contenteditable="false" class="task-checkbox" style="cursor: pointer; user-select: none;">${checkboxMarker}</span><span class="editor-text-node">&#8203;</span></li></ul><p><br></p>`;
+    } else if (type === 'bullet') {
+        const bulletMarker = marker || '•';
+        html = `<ul style="list-style-type: '${bulletMarker} '; margin-top: 4px; margin-bottom: 4px;"><li><span class="editor-text-node">&#8203;</span></li></ul><p><br></p>`;
+    } else if (type === 'number') {
+        const listStyleType = marker || 'decimal';
+        html = `<ol style="list-style-type: ${listStyleType}; margin-top: 4px; margin-bottom: 4px;"><li><span class="editor-text-node">&#8203;</span></li></ol><p><br></p>`;
+    }
+    
+    if (html) {
+      document.execCommand('insertHTML', false, html);
+      updateTopic(selectedTopic.id, { content: editorRef.current.innerHTML });
+    }
+  };
+
   const [isTableModalOpen, setIsTableModalOpen] = useState(false);
   const [tableConfig, setTableConfig] = useState({ rows: 5, cols: 2, hasHeader: true, theme: '#f97316', headerTitle: 'New Table', gridOpacity: 100, gridStyle: 'theme-solid' });
 
@@ -5053,6 +5093,80 @@ export const DPSSTable: React.FC<DPSSTableProps> = ({ data, onUpdate, onUpdateTo
                           >
                             <Table size={16} />
                             <span className="text-[10px] uppercase">Table</span>
+                          </button>
+
+                          <div className="w-px h-6 bg-slate-200 mx-1" />
+
+                          <div className="relative">
+                            <button 
+                              className={`p-1.5 rounded flex items-center gap-0.5 transition-colors ${showListStyleMenu === 'bullet' ? 'bg-orange-100 text-orange-600' : 'hover:bg-slate-200 text-slate-700'}`}
+                              title="Bullet List Styles"
+                              onClick={() => setShowListStyleMenu(showListStyleMenu === 'bullet' ? null : 'bullet')}
+                            >
+                              <List size={16} />
+                              <ChevronDown size={10} className="opacity-50" />
+                            </button>
+                            {showListStyleMenu === 'bullet' && (
+                              <div className="absolute top-full left-0 mt-1 w-48 bg-white border border-slate-200 shadow-xl rounded-xl p-2 z-[300] grid grid-cols-5 gap-1">
+                                {BULLET_STYLES.map(b => (
+                                  <button key={b} onClick={() => { insertListStyle('bullet', b); setShowListStyleMenu(null); }} className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-slate-100 text-sm transition-colors">{b}</button>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+
+                          <div className="relative">
+                            <button 
+                              className={`p-1.5 rounded flex items-center gap-0.5 transition-colors ${showListStyleMenu === 'number' ? 'bg-orange-100 text-orange-600' : 'hover:bg-slate-200 text-slate-700'}`}
+                              title="Numbered List Styles"
+                              onClick={() => setShowListStyleMenu(showListStyleMenu === 'number' ? null : 'number')}
+                            >
+                              <ListOrdered size={16} />
+                              <ChevronDown size={10} className="opacity-50" />
+                            </button>
+                            {showListStyleMenu === 'number' && (
+                              <div className="absolute top-full left-0 mt-1 w-32 bg-white border border-slate-200 shadow-xl rounded-xl p-1 z-[300] flex flex-col">
+                                {OUTLINE_STYLES.map(n => (
+                                  <button key={n.value} onClick={() => { insertListStyle('number', n.value); setShowListStyleMenu(null); }} className="text-left px-2 py-1.5 hover:bg-slate-100 rounded-lg text-[10px] uppercase font-bold text-slate-700 transition-colors">{n.label}</button>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+
+                          <div className="relative">
+                            <button 
+                              className={`p-1.5 rounded flex items-center gap-0.5 transition-colors ${showListStyleMenu === 'check' ? 'bg-orange-100 text-orange-600' : 'hover:bg-slate-200 text-slate-700'}`}
+                              title="Checklist Styles"
+                              onClick={() => setShowListStyleMenu(showListStyleMenu === 'check' ? null : 'check')}
+                            >
+                              <CheckSquare size={16} />
+                              <ChevronDown size={10} className="opacity-50" />
+                            </button>
+                            {showListStyleMenu === 'check' && (
+                              <div className="absolute top-full left-0 mt-1 w-32 bg-white border border-slate-200 shadow-xl rounded-xl p-2 z-[300] grid grid-cols-4 gap-1">
+                                {CHECKLIST_STYLES.map(c => (
+                                  <button key={c} onClick={() => { insertListStyle('check', c); setShowListStyleMenu(null); }} className="w-6 h-6 flex items-center justify-center rounded-lg hover:bg-slate-100 text-xs transition-colors">{c}</button>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+
+                          <div className="w-px h-6 bg-slate-200 mx-1" />
+
+                          <button 
+                            className="p-1.5 hover:bg-slate-200 rounded transition-colors text-slate-700" 
+                            title="Outdent"
+                            onClick={() => document.execCommand('outdent')}
+                          >
+                            <Outdent size={16} />
+                          </button>
+
+                          <button 
+                            className="p-1.5 hover:bg-slate-200 rounded transition-colors text-slate-700" 
+                            title="Indent"
+                            onClick={() => document.execCommand('indent')}
+                          >
+                            <Indent size={16} />
                           </button>
                         </div>
                       </div>

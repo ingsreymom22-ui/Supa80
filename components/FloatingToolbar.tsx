@@ -1,5 +1,22 @@
 import React, { useRef, useEffect, useState } from 'react';
-import { Palette, Bold, Italic, Underline as UnderlineIcon, Strikethrough, CheckSquare, Type, Highlighter } from 'lucide-react';
+import { Palette, Bold, Italic, Underline as UnderlineIcon, Strikethrough, CheckSquare, Type, Highlighter, List, ListOrdered, ChevronDown } from 'lucide-react';
+
+const OUTLINE_STYLES = [
+  { label: '1, 2, 3...', value: 'decimal' },
+  { label: '01, 02, 03...', value: 'decimal-leading-zero' },
+  { label: 'A, B, C...', value: 'upper-alpha' },
+  { label: 'a, b, c...', value: 'lower-alpha' },
+  { label: 'I, II, III...', value: 'upper-roman' },
+  { label: 'i, ii, iii...', value: 'lower-roman' },
+];
+
+const BULLET_STYLES = [
+  '•', '🌹', '⭐', '🚗', '❤️', '✅', '✨', '🔥', '🔮', '🍃', '🎵', '👑', '☀️', '🌙', '💎', '📌', '👥', '⏳', '💡', '🏃', '🥑', '💧', '💪', '🍎', '⚡', '🌿', '📚', '👉', '🚀', '🎯', '▶', '🟢', '💠', '🔹', '🔸', '🚩', '🏁', '①', '②', '③', '❶', '❷', '❸'
+];
+
+const CHECKLIST_STYLES = [
+  '⬜', '✅', '☑️', '✓', '❌', '✗', '⭕', '🔘', '🟩', '🔴'
+];
 
 export const fontFamilies = [
     { name: 'Modern', value: 'Inter' },
@@ -44,6 +61,7 @@ export const highlightColors = [
 export const FloatingToolbar = () => {
     const [pickerPos, setPickerPos] = useState<{ x: number, y: number } | null>(null);
     const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
+    const [showListStyleMenu, setShowListStyleMenu] = useState<'bullet' | 'number' | 'check' | null>(null);
     const dragStartCoords = useRef<{ x: number, y: number } | null>(null);
     const savedRange = useRef<Range | null>(null);
 
@@ -67,7 +85,10 @@ export const FloatingToolbar = () => {
 
             if (isEditable && rect.width > 0) {
               setPickerPos((prev) => {
-                  if (!prev) setDragOffset({ x: 0, y: 0 });
+                  if (!prev) {
+                      setDragOffset({ x: 0, y: 0 });
+                      setShowListStyleMenu(null);
+                  }
                   return {
                       x: rect.left + (rect.width / 2),
                       y: rect.top - 10
@@ -76,9 +97,11 @@ export const FloatingToolbar = () => {
               savedRange.current = range.cloneRange();
             } else {
               setPickerPos(null);
+              setShowListStyleMenu(null);
             }
           } else {
             setPickerPos(null);
+            setShowListStyleMenu(null);
           }
         };
 
@@ -209,18 +232,33 @@ export const FloatingToolbar = () => {
         savedRange.current = selection.getRangeAt(0).cloneRange();
     };
 
-    const insertChecklist = () => {
+    const insertListStyle = (type: 'bullet' | 'number' | 'check', marker?: string) => {
         const selection = window.getSelection();
         if (!selection || !savedRange.current) return;
         
         selection.removeAllRanges();
         selection.addRange(savedRange.current);
-
-        const html = `<ul style="list-style-type: none; padding-left: 0; margin-top: 4px; margin-bottom: 4px;"><li style="display: flex; gap: 8px; align-items: flex-start;"><span contenteditable="false" class="task-checkbox" style="cursor: pointer; user-select: none;">⬜</span><span>&nbsp;</span></li></ul><div><br></div>`;
-        document.execCommand('insertHTML', false, html);
+        
+        let html = '';
+        
+        if (type === 'check') {
+            const checkboxMarker = marker || '⬜';
+            html = `<ul style="list-style-type: none; padding-left: 0; margin-top: 4px; margin-bottom: 4px;"><li style="display: flex; gap: 8px; align-items: flex-start;"><span contenteditable="false" class="task-checkbox" style="cursor: pointer; user-select: none;">${checkboxMarker}</span><span>&nbsp;</span></li></ul><div><br></div>`;
+        } else if (type === 'bullet') {
+            const bulletMarker = marker || '•';
+            html = `<ul style="list-style-type: '${bulletMarker} '; margin-top: 4px; margin-bottom: 4px;"><li><span>&nbsp;</span></li></ul><div><br></div>`;
+        } else if (type === 'number') {
+            const listStyleType = marker || 'decimal';
+            html = `<ol style="list-style-type: ${listStyleType}; margin-top: 4px; margin-bottom: 4px;"><li><span>&nbsp;</span></li></ol><div><br></div>`;
+        }
+        
+        if (html) {
+            document.execCommand('insertHTML', false, html);
+        }
         
         savedRange.current = null;
         setPickerPos(null);
+        setShowListStyleMenu(null);
     };
 
     const handleToolbarMouseDown = (e: React.MouseEvent) => {
@@ -318,12 +356,61 @@ export const FloatingToolbar = () => {
 
                 <div className="w-px h-6 bg-slate-100 self-center mx-2" />
 
-                <button
-                    onClick={insertChecklist}
-                    className="flex items-center gap-2 px-4 py-2 bg-emerald-50 text-emerald-600 rounded-xl hover:bg-emerald-100 transition-all font-black text-[10px] uppercase tracking-wider border border-emerald-100"
-                >
-                    <CheckSquare size={16} /> CHECKLIST
-                </button>
+                <div className="flex gap-1">
+                          <div className="relative">
+                            <button 
+                              className={`p-1.5 rounded flex items-center gap-0.5 transition-colors ${showListStyleMenu === 'bullet' ? 'bg-orange-100 text-orange-600' : 'hover:bg-slate-50 text-slate-600'}`}
+                              title="Bullet List Styles"
+                              onClick={() => setShowListStyleMenu(showListStyleMenu === 'bullet' ? null : 'bullet')}
+                            >
+                              <List size={16} />
+                              <ChevronDown size={10} className="opacity-50" />
+                            </button>
+                            {showListStyleMenu === 'bullet' && (
+                              <div className="absolute top-full right-0 mt-1 w-48 bg-white border border-slate-200 shadow-xl rounded-xl p-2 z-[300] grid grid-cols-5 gap-1">
+                                {BULLET_STYLES.map(b => (
+                                  <button key={b} onClick={() => insertListStyle('bullet', b)} className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-slate-100 text-sm transition-colors text-slate-800">{b}</button>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+
+                          <div className="relative">
+                            <button 
+                              className={`p-1.5 rounded flex items-center gap-0.5 transition-colors ${showListStyleMenu === 'number' ? 'bg-orange-100 text-orange-600' : 'hover:bg-slate-50 text-slate-600'}`}
+                              title="Numbered List Styles"
+                              onClick={() => setShowListStyleMenu(showListStyleMenu === 'number' ? null : 'number')}
+                            >
+                              <ListOrdered size={16} />
+                              <ChevronDown size={10} className="opacity-50" />
+                            </button>
+                            {showListStyleMenu === 'number' && (
+                              <div className="absolute top-full right-0 mt-1 w-32 bg-white border border-slate-200 shadow-xl rounded-xl p-1 z-[300] flex flex-col">
+                                {OUTLINE_STYLES.map(n => (
+                                  <button key={n.value} onClick={() => insertListStyle('number', n.value)} className="text-left px-2 py-1.5 hover:bg-slate-100 rounded-lg text-[10px] uppercase font-bold text-slate-700 transition-colors">{n.label}</button>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+
+                          <div className="relative">
+                            <button 
+                              className={`p-1.5 rounded flex items-center gap-0.5 transition-colors ${showListStyleMenu === 'check' ? 'bg-emerald-100 text-emerald-600' : 'hover:bg-slate-50 text-slate-600'}`}
+                              title="Checklist Styles"
+                              onClick={() => setShowListStyleMenu(showListStyleMenu === 'check' ? null : 'check')}
+                            >
+                              <CheckSquare size={16} />
+                              <ChevronDown size={10} className="opacity-50" />
+                            </button>
+                            {showListStyleMenu === 'check' && (
+                              <div className="absolute top-full right-0 mt-1 w-32 bg-white border border-slate-200 shadow-xl rounded-xl p-2 z-[300] grid grid-cols-4 gap-1">
+                                {CHECKLIST_STYLES.map(c => (
+                                  <button key={c} onClick={() => insertListStyle('check', c)} className="w-6 h-6 flex items-center justify-center rounded-lg hover:bg-slate-100 text-xs transition-colors">{c}</button>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                </div>
             </div>
 
             <div className="w-full h-px bg-slate-100" />

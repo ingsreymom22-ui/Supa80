@@ -261,7 +261,7 @@ const ReminderTable: React.FC<ReminderTableProps> = ({
   ];
 
   return (
-    <div className="flex-1 flex flex-col bg-transparent overflow-hidden p-4 md:p-6 lg:p-8 text-stone-800 relative">
+    <div className="flex-1 flex flex-col bg-transparent overflow-hidden text-stone-800 relative w-full h-full">
       {/* Header Bar */}
       <div className="bg-white/[0.01] backdrop-blur-3xl rounded-[32px] p-6 mb-6 flex flex-col lg:flex-row lg:items-center justify-between shadow-sm border border-white/10 gap-4 transition-all overflow-hidden max-w-full">
         <div className="flex items-center gap-4 shrink-0">
@@ -437,7 +437,7 @@ const ReminderTable: React.FC<ReminderTableProps> = ({
                           type="date"
                           value={displayToIso(s.deadline || '')} 
                           onChange={e => updateField(s.id, 'deadline', isoToDisplay(e.target.value))}
-                          className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
+                          className="absolute inset-0 opacity-0 cursor-pointer w-full h-full z-10"
                         />
                     </div>
                   </td>

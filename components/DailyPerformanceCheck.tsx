@@ -1671,7 +1671,7 @@ export const DailyPerformanceCheck: React.FC<DailyPerformanceCheckProps> = ({
       {activeSubTab === 'Reminder' && (
         <div className="space-y-4 animate-in fade-in duration-200">
           {students && onAddStudent && onUpdateStudent && onDeleteStudent && onClearCategory && filters && setFilters ? (
-            <div className="bg-white rounded-3xl border border-stone-200 shadow-sm overflow-hidden p-1.5 md:p-3 relative z-10">
+            <div className="bg-white rounded-3xl border border-stone-200 shadow-sm overflow-hidden relative z-10 w-full">
               <ReminderTable
                 students={students}
                 onAddStudent={onAddStudent}

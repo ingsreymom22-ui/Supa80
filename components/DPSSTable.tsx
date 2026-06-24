@@ -279,7 +279,8 @@ export const DPSSTable: React.FC<DPSSTableProps> = ({ data, onUpdate, onUpdateTo
   const [searchTerm, setSearchTerm] = useState('');
   const [expandedTopics, setExpandedTopics] = useState<Record<string, boolean>>({});
   const [isArchiveFolderOpen, setIsArchiveFolderOpen] = useState(false);
-  const [sidebarFilter, setSidebarFilter] = useState<'files' | 'stars' | 'smart'>('files');
+  const [sidebarFilter, setSidebarFilter] = useState<string>('files');
+  const [sortOrder, setSortOrder] = useState<'manual' | 'alpha-asc' | 'alpha-desc' | 'newest' | 'oldest'>('manual');
   const [editingTopicId, setEditingTopicId] = useState<string | null>(null);
   const [editingTopicTitle, setEditingTopicTitle] = useState<string>('');
   const [activeTableCell, setActiveTableCell] = useState<HTMLTableCellElement | null>(null);
@@ -315,10 +316,26 @@ export const DPSSTable: React.FC<DPSSTableProps> = ({ data, onUpdate, onUpdateTo
     const t1 = setTimeout(updateSidebarScroll, 50);
     const t2 = setTimeout(updateSidebarScroll, 150);
     const t3 = setTimeout(updateSidebarScroll, 350);
+
+    // Add ResizeObserver to robustly catch all height changes (e.g. adding topics)
+    let observer: ResizeObserver | null = null;
+    if (sidebarScrollRef.current) {
+      observer = new ResizeObserver(() => {
+        updateSidebarScroll();
+      });
+      observer.observe(sidebarScrollRef.current);
+      if (sidebarScrollRef.current.firstElementChild) {
+        observer.observe(sidebarScrollRef.current.firstElementChild);
+      }
+    }
+
     return () => {
       clearTimeout(t1);
       clearTimeout(t2);
       clearTimeout(t3);
+      if (observer) {
+        observer.disconnect();
+      }
     };
   }, [data, sidebarFilter, searchTerm, isSidebarOpen, expandedTopics]);
 
@@ -1272,6 +1289,30 @@ export const DPSSTable: React.FC<DPSSTableProps> = ({ data, onUpdate, onUpdateTo
       }));
   };
 
+  const sortTopicsRecursive = (items: DPSSTopic[]): DPSSTopic[] => {
+    if (sortOrder === 'manual') return items;
+
+    const sorted = [...items].sort((a, b) => {
+      switch (sortOrder) {
+        case 'alpha-asc':
+          return a.title.localeCompare(b.title);
+        case 'alpha-desc':
+          return b.title.localeCompare(a.title);
+        case 'newest':
+          return (b.createdAt || 0) - (a.createdAt || 0);
+        case 'oldest':
+          return (a.createdAt || 0) - (b.createdAt || 0);
+        default:
+          return 0;
+      }
+    });
+
+    return sorted.map(item => ({
+      ...item,
+      children: item.children ? sortTopicsRecursive(item.children) : []
+    }));
+  };
+
   const getArchivedRootTopics = (items: DPSSTopic[]): DPSSTopic[] => {
     if (!Array.isArray(items)) return [];
     const archived: DPSSTopic[] = [];
@@ -1322,41 +1363,14 @@ export const DPSSTable: React.FC<DPSSTableProps> = ({ data, onUpdate, onUpdateTo
   };
 
   const filteredTopics = React.useMemo(() => {
-    return filterTopicsBySearch(activeTopics, searchTerm);
-  }, [activeTopics, searchTerm]);
-
-  // Scoring and sorting logic for the Smart Show feature
-  const smartSortedTopics = React.useMemo(() => {
-    const getTopicScore = (t: DPSSTopic): number => {
-      const content = t.content || '';
-      // Weigh pending checkboxes highly (completed or default unchecked)
-      const incompleteCount = (content.match(/⬜|\[\s*\]/g) || []).length;
-      const totalChecklists = (content.match(/⬜|✅|\[\s*\]|\[x\]/ig) || []).length;
-      const contentLen = content.length;
-      const attachmentsCount = (t.attachments || []).length;
-      
-      return (incompleteCount * 30) + (totalChecklists * 5) + (contentLen * 0.02) + (attachmentsCount * 15);
-    };
-
-    const sortRecursively = (items: DPSSTopic[]): DPSSTopic[] => {
-      return [...items]
-        .map(t => ({
-          ...t,
-          children: t.children ? sortRecursively(t.children) : []
-        }))
-        .sort((a, b) => getTopicScore(b) - getTopicScore(a));
-    };
-
-    return sortRecursively(activeTopics);
-  }, [activeTopics]);
-
-  const filteredSmartTopics = React.useMemo(() => {
-    return filterTopicsBySearch(smartSortedTopics, searchTerm);
-  }, [smartSortedTopics, searchTerm]);
+    const items = filterTopicsBySearch(activeTopics, searchTerm);
+    return sortTopicsRecursive(items);
+  }, [activeTopics, searchTerm, sortOrder]);
 
   const filteredArchivedTopics = React.useMemo(() => {
-    return filterTopicsBySearch(archivedTopics, searchTerm);
-  }, [archivedTopics, searchTerm]);
+    const items = filterTopicsBySearch(archivedTopics, searchTerm);
+    return sortTopicsRecursive(items);
+  }, [archivedTopics, searchTerm, sortOrder]);
 
   // Auto-expand matched topics when searching
   useEffect(() => {
@@ -1720,7 +1734,7 @@ export const DPSSTable: React.FC<DPSSTableProps> = ({ data, onUpdate, onUpdateTo
   };
 
   const addTopic = (parentId?: string) => {
-    const newTopic: DPSSTopic = { id: uuidv4(), title: 'New Topic', content: '', alignment: 'left' };
+    const newTopic: DPSSTopic = { id: uuidv4(), title: 'New Topic', content: '', alignment: 'left', createdAt: Date.now() };
     const updateTopics = (items: DPSSTopic[]): DPSSTopic[] => {
       if (!parentId) return [...items, newTopic];
       return items.map(item => {
@@ -2754,7 +2768,7 @@ export const DPSSTable: React.FC<DPSSTableProps> = ({ data, onUpdate, onUpdateTo
     
     if (type === 'check') {
         const checkboxMarker = marker || '⬜';
-        html = `<ul style="list-style-type: none; padding-left: 0; margin-top: 4px; margin-bottom: 4px;"><li style="display: flex; gap: 8px; align-items: flex-start;"><span contenteditable="false" class="task-checkbox" style="cursor: pointer; user-select: none;">${checkboxMarker}</span><span class="editor-text-node">&#8203;</span></li></ul><p><br></p>`;
+        html = `<ul style="list-style-type: none; padding-left: 0; margin-top: 4px; margin-bottom: 4px;"><li style="margin-bottom: 4px;"><span contenteditable="false" class="task-checkbox" style="cursor: pointer; user-select: none; margin-right: 8px;">${checkboxMarker}</span><span class="editor-text-node">&#8203;</span></li></ul><p><br></p>`;
     } else if (type === 'bullet') {
         const bulletMarker = marker || '•';
         html = `<ul style="list-style-type: '${bulletMarker} '; margin-top: 4px; margin-bottom: 4px;"><li><span class="editor-text-node">&#8203;</span></li></ul><p><br></p>`;
@@ -3185,15 +3199,14 @@ export const DPSSTable: React.FC<DPSSTableProps> = ({ data, onUpdate, onUpdateTo
               // Otherwise create a new checklist item with same marker
               e.preventDefault();
               const newLi = document.createElement('li');
-              newLi.style.display = 'flex';
-              newLi.style.gap = '8px';
-              newLi.style.alignItems = 'flex-start';
+              newLi.style.marginBottom = '4px';
               
               const newCheckbox = document.createElement('span');
               newCheckbox.contentEditable = 'false';
               newCheckbox.className = 'task-checkbox';
               newCheckbox.style.cursor = 'pointer';
               newCheckbox.style.userSelect = 'none';
+              newCheckbox.style.marginRight = '8px';
               newCheckbox.innerText = marker;
               
               newLi.appendChild(newCheckbox);
@@ -4021,6 +4034,12 @@ export const DPSSTable: React.FC<DPSSTableProps> = ({ data, onUpdate, onUpdateTo
                 className="font-bold text-[12px] truncate flex-1 min-w-0 flex items-center gap-1.5" 
                 title={topic.title}
               >
+                {topic.priority && (
+                  <div 
+                    className="w-1.5 h-1.5 rounded-full shrink-0 shadow-sm" 
+                    style={{ backgroundColor: data.settings?.priorities?.find(p => p.id === topic.priority)?.color || '#64748b' }}
+                  />
+                )}
                 {topic.title}
                 {topic.isLocked && <Lock size={10} className="text-slate-400 shrink-0" />}
               </span>
@@ -4105,6 +4124,27 @@ export const DPSSTable: React.FC<DPSSTableProps> = ({ data, onUpdate, onUpdateTo
                       <Star size={14} className={topic.isArchived ? "text-amber-500" : "text-slate-400"} fill={topic.isArchived ? "currentColor" : "none"} />
                       {topic.isArchived ? "Unfavorite" : "Favorite"}
                     </button>
+
+                    <div className="h-px bg-slate-200 dark:bg-slate-700 my-1 mx-2" />
+
+                    <div className="px-3 py-1 text-[9px] font-bold text-slate-400 uppercase tracking-wider">Priority</div>
+                    
+                    {(data.settings?.priorities || []).map((priority) => (
+                        <button 
+                          key={priority.id}
+                          onClick={(e) => { 
+                            e.stopPropagation(); 
+                            updateTopic(topic.id, { priority: topic.priority === priority.id ? undefined : priority.id });
+                            setOpenMenuId(null);
+                          }} 
+                          className="w-full text-left flex items-center gap-2 px-3 py-1.5 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 transition-colors text-xs"
+                        >
+                          <div className="w-2 h-2 rounded-full" style={{ backgroundColor: priority.color }} />
+                          {topic.priority === priority.id ? <span className="font-bold">{priority.label}</span> : priority.label}
+                        </button>
+                    ))}
+
+                    <div className="h-px bg-slate-200 dark:bg-slate-700 my-1 mx-2" />
 
                     <button 
                       onClick={(e) => { 
@@ -4222,12 +4262,11 @@ export const DPSSTable: React.FC<DPSSTableProps> = ({ data, onUpdate, onUpdateTo
           </button>
         </div>
 
-        {/* Unifed Scrollable Column wrapped with a relative container for persistent custom touchscreen scrollbar */}
+        {/* Unifed Scrollable Column */}
         <div className="relative flex-1 min-h-0 flex flex-col">
           <div 
             ref={sidebarScrollRef}
-            onScroll={updateSidebarScroll}
-            className="flex-1 overflow-y-auto pr-8 space-y-3 max-[767px]:landscape:space-y-2.5 hide-native-scrollbar flex flex-col min-h-0 overscroll-contain pb-24 touch-pan-y w-[87%] md:w-full"
+            className="flex-1 overflow-y-auto pl-8 md:pl-10 pr-2 space-y-3 max-[767px]:landscape:space-y-2.5 hide-native-scrollbar flex flex-col min-h-0 overscroll-contain pb-24 touch-pan-y"
           >
           <div className="flex flex-col gap-2.5 shrink-0">
             {/* Equal sized Action Buttons Grid */}
@@ -4253,70 +4292,89 @@ export const DPSSTable: React.FC<DPSSTableProps> = ({ data, onUpdate, onUpdateTo
             </div>
 
             {/* Search Bar placed under action buttons */}
-            <div className="relative w-full">
-              <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-              <input
-                type="text"
-                placeholder="Search notes..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-9 pr-8 py-2.5 bg-slate-100 dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-medium text-slate-700 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-orange-500 focus:border-orange-500 transition-all"
-              />
-              {searchTerm && (
-                <button
-                  onClick={() => setSearchTerm('')}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 font-bold text-xs"
-                >
-                  ✕
-                </button>
-              )}
+            <div className="flex items-center gap-2 w-full">
+              <div className="relative flex-1">
+                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                <input
+                  type="text"
+                  placeholder="Search notes..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full pl-9 pr-8 py-2.5 bg-slate-100 dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-medium text-slate-700 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-orange-500 focus:border-orange-500 transition-all"
+                />
+                {searchTerm && (
+                  <button
+                    onClick={() => setSearchTerm('')}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 font-bold text-xs"
+                  >
+                    ✕
+                  </button>
+                )}
+              </div>
+              
+              <button
+                onClick={() => {
+                  const orders: ('manual' | 'alpha-asc' | 'alpha-desc' | 'newest' | 'oldest')[] = ['manual', 'alpha-asc', 'alpha-desc', 'newest', 'oldest'];
+                  const next = orders[(orders.indexOf(sortOrder) + 1) % orders.length];
+                  setSortOrder(next);
+                }}
+                className={`shrink-0 p-2.5 rounded-xl transition-all border ${
+                  sortOrder !== 'manual' 
+                    ? 'bg-orange-50 border-orange-200 text-orange-600 shadow-sm' 
+                    : 'bg-slate-100 dark:bg-slate-900/40 border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 hover:bg-slate-200/50 dark:hover:bg-slate-800/60'
+                }`}
+                title={`Sort: ${sortOrder === 'manual' ? 'Manual' : sortOrder === 'alpha-asc' ? 'A-Z' : sortOrder === 'alpha-desc' ? 'Z-A' : sortOrder === 'newest' ? 'Newest' : 'Oldest'}`}
+              >
+                {sortOrder === 'manual' ? <Layers size={14} /> : 
+                 sortOrder === 'alpha-asc' ? <ArrowDown size={14} /> : 
+                 sortOrder === 'alpha-desc' ? <ArrowUp size={14} /> : 
+                 <Calendar size={14} />}
+              </button>
             </div>
 
-            {/* Files / Stars / Smart Segmented Tab Control in ONE line right under Search */}
-            <div className="flex bg-slate-100 dark:bg-slate-900/60 p-1 rounded-2xl w-full border border-slate-200/40 dark:border-slate-800/40 gap-0.5">
+            {/* Priority / Stars Segmented Tab Control */}
+            <div className="flex bg-slate-100 dark:bg-slate-900/60 p-1 rounded-2xl w-full border border-slate-200/40 dark:border-slate-800/40 gap-0.5 overflow-x-auto hide-native-scrollbar">
               <button
                 onClick={() => setSidebarFilter('files')}
-                className={`flex-grow flex items-center justify-center gap-1 py-1.5 rounded-xl text-[9px] sm:text-[10px] font-bold uppercase tracking-wider transition-all duration-200 cursor-pointer ${
+                className={`shrink-0 flex items-center justify-center gap-1 px-3 py-1.5 rounded-xl text-[9px] sm:text-[10px] font-bold uppercase tracking-wider transition-all duration-200 cursor-pointer ${
                   sidebarFilter === 'files'
-                    ? 'bg-white dark:bg-slate-800 text-orange-600 dark:text-orange-400 shadow-sm font-black'
+                    ? 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 shadow-sm font-black'
                     : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'
                 }`}
-                title="All active files & folders"
+                title="All Files"
               >
-                <Folder size={11} className={sidebarFilter === 'files' ? 'text-orange-500' : 'text-slate-400'} />
-                <span>Files</span>
-                <span className={`px-1 py-0.5 rounded-full text-[8px] font-semibold scale-90 ${sidebarFilter === 'files' ? 'bg-orange-50 dark:bg-orange-900/40 text-orange-700 dark:text-orange-400' : 'bg-slate-200 dark:bg-slate-800/80 text-slate-600'}`}>
-                  {activeTopics.length}
-                </span>
+                <span>All</span>
               </button>
+
+              {(data.settings?.priorities || []).map((priority) => (
+                  <button
+                    key={priority.id}
+                    onClick={() => setSidebarFilter(priority.id)}
+                    className={`shrink-0 flex items-center justify-center gap-1 px-3 py-1.5 rounded-xl text-[9px] sm:text-[10px] font-bold uppercase tracking-wider transition-all duration-200 cursor-pointer ${
+                      sidebarFilter === priority.id
+                        ? 'shadow-sm font-black'
+                        : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'
+                    }`}
+                    style={sidebarFilter === priority.id ? { backgroundColor: priority.color, color: '#fff' } : {}}
+                  >
+                    <div 
+                      className={`w-2 h-2 rounded-full ${sidebarFilter === priority.id ? 'bg-white' : ''}`} 
+                      style={sidebarFilter !== priority.id ? { backgroundColor: priority.color } : {}}
+                    />
+                    <span>{priority.label}</span>
+                  </button>
+              ))}
 
               <button
                 onClick={() => setSidebarFilter('stars')}
-                className={`flex-grow flex items-center justify-center gap-1 py-1.5 rounded-xl text-[9px] sm:text-[10px] font-bold uppercase tracking-wider transition-all duration-200 cursor-pointer ${
+                className={`shrink-0 flex items-center justify-center gap-1 px-3 py-1.5 rounded-xl text-[9px] sm:text-[10px] font-bold uppercase tracking-wider transition-all duration-200 cursor-pointer ${
                   sidebarFilter === 'stars'
-                    ? 'bg-amber-500 dark:bg-amber-600 text-white shadow-sm font-black'
+                    ? 'bg-amber-400 text-white shadow-sm font-black'
                     : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'
                 }`}
-                title="Favorite / starred topics"
               >
-                <Star size={11} fill={sidebarFilter === 'stars' ? "currentColor" : "none"} className={sidebarFilter === 'stars' ? 'text-white' : 'text-amber-500'} />
+                <Star size={11} fill={sidebarFilter === 'stars' ? "currentColor" : "none"} className={sidebarFilter === 'stars' ? 'text-white' : 'text-amber-400'} />
                 <span>Stars</span>
-                <span className={`px-1 py-0.5 rounded-full text-[8px] font-semibold scale-90 ${sidebarFilter === 'stars' ? 'bg-amber-600 text-white' : 'bg-amber-100 dark:bg-amber-900/40 text-amber-750 text-amber-700'}`}>
-                  {archivedTopics.length}
-                </span>
-              </button>
-
-              <button
-                onClick={() => setSidebarFilter('smart')}
-                className={`flex-grow flex items-center justify-center gap-1 py-1.5 rounded-xl text-[9px] sm:text-[10px] font-bold uppercase tracking-wider transition-all duration-200 cursor-pointer ${
-                  sidebarFilter === 'smart'
-                    ? 'bg-gradient-to-r from-indigo-505 to-purple-650 text-white bg-indigo-600 dark:bg-indigo-650 shadow-sm font-black'
-                    : 'text-slate-500 dark:text-slate-400 hover:text-slate-705 dark:hover:text-slate-305'
-                }`}
-                title="Smart Show: Prioritizes active checklists, attachments, and detailed notes"
-              >
-                <Wand2 size={11} className={sidebarFilter === 'smart' ? 'text-white' : 'text-indigo-550 text-indigo-500'} />
-                <span>Smart</span>
               </button>
             </div>
           </div>
@@ -4337,20 +4395,7 @@ export const DPSSTable: React.FC<DPSSTableProps> = ({ data, onUpdate, onUpdateTo
                 </div>
               )}
             </div>
-          ) : sidebarFilter === 'smart' ? (
-            <div className="space-y-1 min-h-[50px] outline-none rounded-xl transition-all">
-              <div className="text-[9px] font-black text-indigo-500 dark:text-indigo-400/80 uppercase tracking-widest pl-1 mb-2 flex items-center gap-1">
-                <span>✨ Smart Show: Active Task Priorities</span>
-              </div>
-              {filteredSmartTopics.length > 0 ? (
-                filteredSmartTopics.map(t => renderTopic(t))
-              ) : (
-                <div className="text-center py-6 text-xs text-slate-400 select-none">
-                  {searchTerm ? 'No matching smart topics' : 'No active notes block found'}
-                </div>
-              )}
-            </div>
-          ) : (
+          ) : sidebarFilter === 'stars' ? (
             <div className="space-y-1.5 pl-0.5">
               {filteredArchivedTopics.length > 0 ? (
                 filteredArchivedTopics.map(t => renderTopic(t))
@@ -4360,57 +4405,30 @@ export const DPSSTable: React.FC<DPSSTableProps> = ({ data, onUpdate, onUpdateTo
                 </div>
               )}
             </div>
+          ) : (
+            <div className="space-y-1 min-h-[50px] outline-none rounded-xl transition-all">
+               {(() => {
+                 const currentPriority = data.settings?.priorities?.find(p => p.id === sidebarFilter);
+                 const priorityTopics = filterTopicsBySearch(activeTopics.filter(t => t.priority === sidebarFilter), searchTerm);
+                 
+                 return (
+                   <>
+                    <div className="text-[9px] font-black uppercase tracking-widest pl-1 mb-2 flex items-center gap-1" style={{ color: currentPriority?.color || '#64748b' }}>
+                      <span>{currentPriority?.label || 'Priority'} Filter</span>
+                    </div>
+                    {priorityTopics.length > 0 ? (
+                      sortTopicsRecursive(priorityTopics).map(t => renderTopic(t))
+                    ) : (
+                      <div className="text-center py-6 text-xs text-slate-400 select-none">
+                        {searchTerm ? `No matching ${currentPriority?.label || ''} topics` : `No ${currentPriority?.label || ''} topics`}
+                      </div>
+                    )}
+                   </>
+                 );
+               })()}
+            </div>
           )}
           </div>
-
-          {/* Custom Simulated Scrollbar (Always visible on touchscreens & mobile platforms) */}
-          {(() => {
-            const canScrollSidebar = sidebarScrollState.scrollHeight > sidebarScrollState.clientHeight && sidebarScrollState.clientHeight > 0;
-            if (!canScrollSidebar) return null;
-
-            const containerHeight = sidebarScrollState.clientHeight;
-            const thumbHeight = Math.max(32, Math.round((containerHeight / sidebarScrollState.scrollHeight) * containerHeight));
-            const maxScrollTop = sidebarScrollState.scrollHeight - containerHeight;
-            const percent = maxScrollTop > 0 ? sidebarScrollState.scrollTop / maxScrollTop : 0;
-            const thumbOffset = Math.round(percent * (containerHeight - thumbHeight));
-
-            const handlePointerDown = (e: React.PointerEvent) => {
-              e.preventDefault();
-              const startY = e.clientY;
-              const startScrollTop = sidebarScrollState.scrollTop;
-
-              const handlePointerMove = (moveEvent: PointerEvent) => {
-                const deltaY = moveEvent.clientY - startY;
-                const scrollRatio = sidebarScrollState.scrollHeight / containerHeight;
-                if (sidebarScrollRef.current) {
-                  sidebarScrollRef.current.scrollTop = startScrollTop + deltaY * scrollRatio;
-                }
-              };
-
-              const handlePointerUp = () => {
-                document.removeEventListener('pointermove', handlePointerMove);
-                document.removeEventListener('pointerup', handlePointerUp);
-              };
-
-              document.addEventListener('pointermove', handlePointerMove);
-              document.addEventListener('pointerup', handlePointerUp);
-            };
-
-            return (
-              <div 
-                className="absolute right-[13%] md:right-1 top-1 bottom-1 w-3 bg-slate-200/50 dark:bg-slate-800/60 rounded-full z-[100] flex justify-center py-1 overflow-visible"
-              >
-                <div 
-                  onPointerDown={handlePointerDown}
-                  className="w-full bg-gradient-to-b from-orange-400 via-purple-500 to-green-500 rounded-full cursor-grab active:cursor-grabbing hover:opacity-100 opacity-90 transition-opacity touch-none shadow-sm"
-                  style={{
-                    height: `${thumbHeight}px`,
-                    transform: `translateY(${Math.max(0, thumbOffset)}px)`,
-                  }}
-                />
-              </div>
-            );
-          })()}
         </div>
 
         {/* Resizable drag handle (Touch + Mouse friendly) */}
@@ -5597,7 +5615,8 @@ export const DPSSTable: React.FC<DPSSTableProps> = ({ data, onUpdate, onUpdateTo
                 })()}
 
                 {/* Relative Wrapper for Editor + Ruler Guides */}
-                <div className="relative flex flex-col w-full flex-1 min-h-0 overflow-y-auto editor-scrollbar">
+                <div className="relative flex flex-col w-full flex-1 min-h-0 overflow-y-auto editor-scrollbar" dir="rtl">
+                  <div dir="ltr" className="flex flex-col flex-1 w-full relative">
                   
                   {/* Modern Word-style Horizontal Page Ruler */}
                   {showRuler && (
@@ -5660,12 +5679,13 @@ export const DPSSTable: React.FC<DPSSTableProps> = ({ data, onUpdate, onUpdateTo
                         fontSize: `${selectedTopic?.textFontSize || textFontSize}px`,
                         fontFamily: selectedTopic?.textFontFamily || textFontFamily
                       }}
-                      className={`editor-content editor-scrollbar w-full flex-1 outline-none p-8 rounded-3xl leading-relaxed font-medium transition-all focus:ring-4 focus:ring-orange-500/10 shadow-md ${
+                      className={`editor-content w-full flex-1 outline-none p-4 md:p-8 rounded-3xl leading-relaxed font-medium transition-all focus:ring-4 focus:ring-orange-500/10 shadow-md ${
                         forceLightBg
                           ? 'bg-[#fcfdfd] border border-slate-200 text-slate-800 shadow-2xl'
                           : selectedPaper.className
                       }`}
                   ></div>
+                  </div>
                 </div>
 
                 {isTableModalOpen && (

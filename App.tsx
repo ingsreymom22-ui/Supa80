@@ -26,6 +26,7 @@ import {
   Tab,
   ViewMode,
   AppSettings,
+  PriorityLevel,
   StudentCategory,
   JournalEntry,
   ExpenseEntry,
@@ -118,6 +119,12 @@ const DEFAULT_COLUMNS: ColumnConfig[] = [
   },
 ];
 
+const DEFAULT_PRIORITIES: PriorityLevel[] = [
+  { id: 'very-important', label: 'Urgent', color: '#f43f5e' },
+  { id: 'important', label: 'High', color: '#f59e0b' },
+  { id: 'less-important', label: 'Normal', color: '#10b981' },
+];
+
 const App: React.FC = () => {
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(() => {
     try {
@@ -177,6 +184,10 @@ const App: React.FC = () => {
           if (!parsed.students) {
             parsed.students = [];
           }
+          if (!parsed.settings?.priorities) {
+            if (!parsed.settings) parsed.settings = {};
+            parsed.settings.priorities = DEFAULT_PRIORITIES;
+          }
           if (!parsed.settings?.columns) {
             parsed.settings = {
               ...(parsed.settings || {
@@ -208,6 +219,7 @@ const App: React.FC = () => {
         textFontFamily: "'Inter', sans-serif",
         textFontSize: 16,
         columns: DEFAULT_COLUMNS,
+        priorities: DEFAULT_PRIORITIES,
         backgroundImage: "solid-white",
         backgroundDimOpacity: 0,
         fontColor: '#0f172a',
@@ -1196,7 +1208,7 @@ const App: React.FC = () => {
 
   return (
     <div
-      className={`h-screen flex font-sans overflow-hidden md:overflow-hidden transition-all duration-700 relative ${data.settings?.highContrastMode ? 'high-contrast-mode' : ''}`}
+      className={`h-[100dvh] flex font-sans overflow-hidden md:overflow-hidden transition-all duration-700 relative ${data.settings?.highContrastMode ? 'high-contrast-mode' : ''}`}
       style={{
         fontFamily: data.settings?.fontFamily || "'Inter', sans-serif",
         backgroundColor: data.settings?.appBackgroundColor || (data.settings?.backgroundImage === 'solid-white' ? "#ffffff" : "transparent"),
@@ -1253,7 +1265,7 @@ const App: React.FC = () => {
         }}
       />
 
-      <div className="flex h-screen w-full relative z-10 transition-colors duration-700 dark:text-slate-200">
+      <div className="flex h-full w-full relative z-10 transition-colors duration-700 dark:text-slate-200">
         <Sidebar
           isOpen={isSidebarOpen}
           setIsOpen={setIsSidebarOpen}

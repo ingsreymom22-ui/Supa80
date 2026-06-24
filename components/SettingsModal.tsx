@@ -190,7 +190,8 @@ export const SettingsModal: React.FC<Props> = ({ isOpen, onClose, settings, onUp
     paperStyle: settings?.paperStyle || 'none',
     tableBorderThickness: settings?.tableBorderThickness || 2,
     tableBorderColor: settings?.tableBorderColor || '#334155',
-    dailyPerformanceSymbol: settings?.dailyPerformanceSymbol || 'star'
+    dailyPerformanceSymbol: settings?.dailyPerformanceSymbol || 'star',
+    priorities: settings?.priorities || []
   });
 
   const updateSettingsRealtimeMultiple = (updates: Partial<AppSettings>) => {
@@ -908,6 +909,72 @@ export const SettingsModal: React.FC<Props> = ({ isOpen, onClose, settings, onUp
                           </div>
                         </>
                     )}
+                </div>
+            </div>
+
+            {/* Priority Management */}
+            <div className="space-y-4">
+                <div className="flex items-center gap-2 text-slate-800 font-black mb-2">
+                    <Check size={18} className="text-orange-500" />
+                    <h3 className="tracking-wide uppercase text-[11px]">Priority Levels</h3>
+                </div>
+
+                <div className="bg-white/50 border border-white/60 p-4 rounded-2xl space-y-4 shadow-sm">
+                    <p className="text-[10px] text-slate-500 leading-relaxed">
+                        Customize priority labels and colors. These apply to topics and notes.
+                    </p>
+                    
+                    <div className="space-y-2">
+                        {(localSettings.priorities || []).map((priority, index) => (
+                            <div key={priority.id} className="flex items-center gap-2">
+                                <div 
+                                    className="w-4 h-4 rounded-full shrink-0 border border-white/50 shadow-sm"
+                                    style={{ backgroundColor: priority.color }}
+                                />
+                                <input 
+                                    type="text"
+                                    value={priority.label}
+                                    onChange={(e) => {
+                                        const newPriorities = [...(localSettings.priorities || [])];
+                                        newPriorities[index] = { ...newPriorities[index], label: e.target.value };
+                                        updateSettingsRealtimeMultiple({ priorities: newPriorities });
+                                    }}
+                                    className="flex-1 bg-white/50 border border-slate-200 rounded-lg px-2 py-1 text-xs font-bold text-slate-800 outline-none focus:border-orange-500 transition-all"
+                                />
+                                <input 
+                                    type="color"
+                                    value={priority.color}
+                                    onChange={(e) => {
+                                        const newPriorities = [...(localSettings.priorities || [])];
+                                        newPriorities[index] = { ...newPriorities[index], color: e.target.value };
+                                        updateSettingsRealtimeMultiple({ priorities: newPriorities });
+                                    }}
+                                    className="w-6 h-6 p-0 border-none bg-transparent cursor-pointer overflow-hidden rounded-md"
+                                />
+                                <button 
+                                    onClick={() => {
+                                        const newPriorities = (localSettings.priorities || []).filter((_, i) => i !== index);
+                                        updateSettingsRealtimeMultiple({ priorities: newPriorities });
+                                    }}
+                                    className="p-1.5 hover:bg-red-50 text-slate-400 hover:text-red-500 rounded-lg transition-all"
+                                >
+                                    <Trash2 size={14} />
+                                </button>
+                            </div>
+                        ))}
+                    </div>
+
+                    <button 
+                        onClick={() => {
+                            const newPriorities = [...(localSettings.priorities || [])];
+                            const id = `priority-${Date.now()}`;
+                            newPriorities.push({ id, label: 'New Priority', color: '#64748b' });
+                            updateSettingsRealtimeMultiple({ priorities: newPriorities });
+                        }}
+                        className="w-full py-2 border-2 border-dashed border-slate-200 rounded-xl text-[10px] font-black uppercase text-slate-500 hover:border-orange-300 hover:text-orange-600 transition-all flex items-center justify-center gap-2"
+                    >
+                        <Settings2 size={12} /> Add Priority Level
+                    </button>
                 </div>
             </div>
 

@@ -44,6 +44,12 @@ export interface Student {
   [key: string]: any; // Support for dynamic columns
 }
 
+export interface PriorityLevel {
+  id: string;
+  label: string;
+  color: string;
+}
+
 export interface AppSettings {
   fontSize: number;
   fontFamily: string;
@@ -67,6 +73,7 @@ export interface AppSettings {
   dopamineFast?: any;
   dopamineFastsHistory?: any[];
   weeklyAIInsight?: Record<string, string>;
+  priorities?: PriorityLevel[];
 }
 
 export interface ModuleLocks {
@@ -123,9 +130,11 @@ export interface DPSSTopic {
   deletedAt?: string; // Soft delete support
   children?: DPSSTopic[];
   order?: number;
+  createdAt?: number;
   attachments?: { id: string; name: string; url: string; type: string }[];
   isArchived?: boolean;
   isLocked?: boolean;
+  priority?: string;
   customBullets?: string[];
   customChecklists?: string[];
   defaultListType?: 'bullet' | 'checklist' | 'number';

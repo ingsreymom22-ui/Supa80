@@ -2805,13 +2805,13 @@ export const DPSSTable: React.FC<DPSSTableProps> = ({ data, onUpdate, onUpdateTo
 
     // Outer scrollable container to support phone bar horizontally
     let html = `<p><br></p><div class="table-scroll-container" style="overflow-x: auto; max-width: 100%; -webkit-overflow-scrolling: touch; border-radius: 12px; margin: 8px 0 16px 0; border: ${styleType.endsWith('-open') ? 'none' : `1px solid ${borderRgba}`};">`;
-    html += `<table style="width: 100%; border-collapse: collapse; ${tableBorderCss} font-size: 14px; border-radius: 12px; overflow: hidden; display: table; table-layout: fixed;">`;
+    html += `<table class="card-stack" style="width: 100%; border-collapse: collapse; ${tableBorderCss} font-size: 14px; border-radius: 12px; overflow: hidden; display: table; table-layout: auto;">`;
     
     html += '<colgroup>';
     for (let c = 0; c < cols; c++) {
       const isFirstCol = c === 0;
-      const colWidth = isFirstCol ? '60px' : `${Math.floor((100 - 10) / (cols - 1 || 1))}%`;
-      html += `<col style="width: ${colWidth};">`;
+      const colWidth = isFirstCol ? '60px' : 'auto';
+      html += `<col style="width: ${colWidth}; min-width: ${isFirstCol ? '50px' : '150px'};">`;
     }
     html += '</colgroup>';
 
@@ -2840,7 +2840,9 @@ export const DPSSTable: React.FC<DPSSTableProps> = ({ data, onUpdate, onUpdateTo
         const cellStyle = `padding: 12px; ${cellBorderCss} min-height: 24px; transition: background 0.2s;`;
         const content = isFirstCol ? (r + 1).toString() : '';
         const textAlign = isFirstCol ? 'center' : 'left';
-        html += `<td style="${cellStyle} text-align: ${textAlign}; font-weight: ${isFirstCol ? '800' : '500'};">${content}</td>`;
+        // We add data-label for mobile card stack (generic label if no specific header per col)
+        const dataLabel = isFirstCol ? 'No.' : `Col ${c}`;
+        html += `<td data-label="${dataLabel}" style="${cellStyle} text-align: ${textAlign}; font-weight: ${isFirstCol ? '800' : '500'};">${content}</td>`;
       }
       html += '</tr>';
     }
@@ -5468,6 +5470,78 @@ export const DPSSTable: React.FC<DPSSTableProps> = ({ data, onUpdate, onUpdateTo
                       .editor-content table {
                         border-collapse: collapse !important;
                         width: 100%;
+                        table-layout: auto !important;
+                      }
+
+                      .editor-content .table-scroll-container {
+                        max-width: 100% !important;
+                        overflow-x: auto !important;
+                        -webkit-overflow-scrolling: touch !important;
+                        margin: 1rem 0 !important;
+                        background: transparent !important;
+                      }
+
+                      @media (max-width: 768px) {
+                        .editor-content table.card-stack, 
+                        .editor-content table.card-stack thead, 
+                        .editor-content table.card-stack tbody, 
+                        .editor-content table.card-stack th, 
+                        .editor-content table.card-stack td, 
+                        .editor-content table.card-stack tr {
+                          display: block !important;
+                          width: 100% !important;
+                          min-width: 0 !important;
+                        }
+                        
+                        .editor-content table.card-stack thead tr {
+                          position: absolute !important;
+                          top: -9999px !important;
+                          left: -9999px !important;
+                        }
+                        
+                        .editor-content table.card-stack tr {
+                          margin-bottom: 1.5rem !important;
+                          border: 1px solid rgba(0,0,0,0.1) !important;
+                          border-radius: 16px !important;
+                          overflow: hidden !important;
+                          background: rgba(255,255,255,0.5) !important;
+                          box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05) !important;
+                        }
+                        
+                        .editor-content table.card-stack td {
+                          border: none !important;
+                          border-bottom: 1px solid rgba(0,0,0,0.05) !important;
+                          position: relative !important;
+                          padding: 12px 12px 12px 35% !important;
+                          min-height: 48px !important;
+                          text-align: left !important;
+                          font-size: 13px !important;
+                          display: flex !important;
+                          align-items: center !important;
+                        }
+                        
+                        .editor-content table.card-stack td:last-child {
+                          border-bottom: none !important;
+                        }
+                        
+                        .editor-content table.card-stack td::before {
+                          content: attr(data-label) !important;
+                          position: absolute !important;
+                          left: 12px !important;
+                          width: 30% !important;
+                          font-weight: 800 !important;
+                          text-transform: uppercase !important;
+                          font-size: 9px !important;
+                          color: #64748b !important;
+                          white-space: nowrap !important;
+                          overflow: hidden !important;
+                          text-overflow: ellipsis !important;
+                        }
+
+                        .editor-content table:not(.card-stack) {
+                          min-width: 700px !important;
+                          width: max-content !important;
+                        }
                       }
 
                       .editor-content th, 

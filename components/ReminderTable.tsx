@@ -346,7 +346,8 @@ const ReminderTable: React.FC<ReminderTableProps> = ({
 
       <div className="flex-1 bg-white/[0.01] backdrop-blur-3xl rounded-[40px] shadow-2xl border border-white/10 overflow-hidden flex flex-col">
         <div className="overflow-auto flex-1 custom-scrollbar">
-          <table className="w-full border-collapse table-fixed min-w-[900px]">
+          {/* Desktop Table View */}
+          <table className="hidden md:table w-full border-collapse table-fixed min-w-[900px]">
             <thead className="sticky top-0 z-40 bg-white/10 backdrop-blur-xl">
               <tr className="border-b border-white/20">
                 <th className="w-16 h-14 text-[10px] font-black text-slate-900 uppercase tracking-widest">#</th>
@@ -508,18 +509,135 @@ const ReminderTable: React.FC<ReminderTableProps> = ({
                   </td>
                 </tr>
               ))}
-              {activeReminders.length === 0 && (
-                <tr>
-                  <td colSpan={8} className="py-20 text-center">
-                    <div className="flex flex-col items-center gap-3 opacity-20">
-                      <Bell size={48} />
-                      <p className="text-xs font-black uppercase tracking-widest">No reminders set</p>
-                    </div>
-                  </td>
-                </tr>
-              )}
             </tbody>
           </table>
+
+          {/* Mobile Card Stack View */}
+          <div className="md:hidden flex flex-col gap-4 p-4">
+            {displayedReminders
+              .filter(s => filters.showHidden || !s.isHidden)
+              .map((s, idx) => (
+                <div 
+                  key={s.id} 
+                  className={`relative p-5 rounded-3xl border border-white/20 shadow-lg ${getRowBg(idx)} ${s.isHidden ? 'opacity-50' : ''}`}
+                >
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="flex items-center gap-2">
+                      <span className="w-8 h-8 bg-white/40 rounded-full flex items-center justify-center text-[10px] font-black text-slate-600">
+                        {idx + 1}
+                      </span>
+                      <div className="flex gap-1">
+                        <button 
+                          onClick={() => moveReminder(idx, idx - 1)}
+                          disabled={idx === 0}
+                          className="p-1.5 bg-white/40 rounded-lg text-slate-400 disabled:opacity-20"
+                        >
+                          <ChevronUp size={14} />
+                        </button>
+                        <button 
+                          onClick={() => moveReminder(idx, idx + 1)}
+                          disabled={idx === activeReminders.length - 1}
+                          className="p-1.5 bg-white/40 rounded-lg text-slate-400 disabled:opacity-20"
+                        >
+                          <ChevronDown size={14} />
+                        </button>
+                      </div>
+                    </div>
+                    <button 
+                      onClick={() => onDeleteStudent(s.id)}
+                      className="p-2 text-rose-400 bg-white/40 rounded-xl"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
+
+                  <div className="space-y-4">
+                    <MultilineInput 
+                      value={s.name || ''} 
+                      onChange={val => updateField(s.id, 'name', val)}
+                      placeholder="Enter task name..."
+                      style={{ 
+                        fontFamily: settings?.fontFamily || "Inter, sans-serif",
+                        fontSize: '16px'
+                      }}
+                      className="w-full bg-transparent font-black text-slate-900 outline-none text-lg"
+                    />
+
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-1">
+                        <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Deadline</label>
+                        <div className="relative flex items-center gap-2 p-3 bg-white/40 rounded-2xl border border-white/20">
+                          <Calendar size={14} className="text-orange-500" />
+                          <span className="text-xs font-black text-slate-700">
+                            {s.deadline ? formatShortDate(s.deadline) : 'No Date'}
+                          </span>
+                          <input 
+                            type="date"
+                            value={displayToIso(s.deadline || '')} 
+                            onChange={e => updateField(s.id, 'deadline', isoToDisplay(e.target.value))}
+                            className="absolute inset-0 opacity-0"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Priority</label>
+                        <select
+                          value={s.priority || 'Medium'}
+                          onChange={e => updateField(s.id, 'priority', e.target.value)}
+                          className={`w-full p-3 rounded-2xl text-xs font-black uppercase border border-white/20 ${
+                            s.priority === 'High' ? 'text-red-500 bg-red-50/20' :
+                            s.priority === 'Low' ? 'text-slate-500 bg-slate-50/20' :
+                            'text-amber-500 bg-amber-50/20'
+                          }`}
+                        >
+                          <option value="High">🔴 HIGH</option>
+                          <option value="Medium">🟡 MED</option>
+                          <option value="Low">⚪ LOW</option>
+                        </select>
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Recurring</label>
+                        <select
+                          value={s.recurring || 'None'}
+                          onChange={e => updateField(s.id, 'recurring', e.target.value)}
+                          className="w-full p-3 rounded-2xl text-xs font-black uppercase text-orange-500 bg-white/40 border border-white/20"
+                        >
+                          <option value="None">↻ ONCE</option>
+                          <option value="Daily">↻ DAILY</option>
+                          <option value="Weekly">↻ WEEKLY</option>
+                          <option value="Monthly">↻ MONTHLY</option>
+                        </select>
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Status</label>
+                        <select 
+                          value={s.status || 'Pending'} 
+                          onChange={e => handleStatusChange(s, e.target.value)}
+                          className={`w-full p-3 rounded-2xl text-xs font-black uppercase bg-white/40 border border-white/20 ${getStatusColor(s.status)}`}
+                        >
+                          <option value="Pending">Pending</option>
+                          <option value="In Progress">In Progress</option>
+                          <option value="Completed">Completed</option>
+                          <option value="Urgent">Urgent</option>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+          </div>
+
+          {displayedReminders.length === 0 && (
+            <div className="py-20 text-center">
+              <div className="flex flex-col items-center gap-3 opacity-20">
+                <Bell size={48} />
+                <p className="text-xs font-black uppercase tracking-widest">No reminders set</p>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 

@@ -18,7 +18,10 @@ import {
   Brain,
   Layers,
   Scale,
-  Star
+  Star,
+  Activity,
+  BookOpen,
+  Zap
 } from 'lucide-react';
 import { AppData, Template, DPSSTopic, Tab } from '../types';
 import { RichTextDiv, fontFamilies } from './FloatingToolbar';
@@ -105,6 +108,86 @@ const presetTemplates: Template[] = [
     defaultListType: 'bullet',
     defaultMarker: '🏃',
     themeColor: 'rose',
+    createdAt: new Date().toISOString(),
+    isSystem: true
+  },
+  {
+    id: 'sys_template_task_matrix',
+    name: 'Task Performance Matrix',
+    description: 'High-visibility table for tracking complex tasks, sub-priorities, and completion status.',
+    content: `<h3>⚡ Task Execution Matrix</h3>
+<p>Organize high-impact initiatives and monitor real-time completion states.</p>
+<div class="table-scroll-container" style="overflow-x: auto; max-width: 100%; border-radius: 12px; margin: 16px 0; border: 1px solid rgba(0,0,0,0.1);">
+  <table class="card-stack" style="width: 100%; border-collapse: collapse; font-size: 13px;">
+    <thead>
+      <tr style="background-color: #f8fafc; border-bottom: 2px solid #e2e8f0;">
+        <th style="padding: 12px; text-align: left; font-weight: 800; text-transform: uppercase; color: #64748b; font-size: 10px; width: 50px;">No.</th>
+        <th style="padding: 12px; text-align: left; font-weight: 800; text-transform: uppercase; color: #64748b; font-size: 10px;">Strategic Task</th>
+        <th style="padding: 12px; text-align: center; font-weight: 800; text-transform: uppercase; color: #64748b; font-size: 10px; width: 100px;">Priority</th>
+        <th style="padding: 12px; text-align: center; font-weight: 800; text-transform: uppercase; color: #64748b; font-size: 10px; width: 120px;">Status</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td data-label="No." style="padding: 12px; border-bottom: 1px solid #f1f5f9; text-align: center; font-weight: 800;">1</td>
+        <td data-label="Task" style="padding: 12px; border-bottom: 1px solid #f1f5f9;">[Enter Primary Focus]</td>
+        <td data-label="Priority" style="padding: 12px; border-bottom: 1px solid #f1f5f9; text-align: center;"><span style="background: #fef2f2; color: #ef4444; padding: 2px 8px; border-radius: 6px; font-weight: 900; font-size: 10px;">🔥 HIGH</span></td>
+        <td data-label="Status" style="padding: 12px; border-bottom: 1px solid #f1f5f9; text-align: center;"><span contenteditable="false" class="task-checkbox" style="cursor: pointer; user-select: none;">⬜</span> Pending</td>
+      </tr>
+      <tr>
+        <td data-label="No." style="padding: 12px; border-bottom: 1px solid #f1f5f9; text-align: center; font-weight: 800;">2</td>
+        <td data-label="Task" style="padding: 12px; border-bottom: 1px solid #f1f5f9;">[Enter Secondary Focus]</td>
+        <td data-label="Priority" style="padding: 12px; border-bottom: 1px solid #f1f5f9; text-align: center;"><span style="background: #fdfae6; color: #d97706; padding: 2px 8px; border-radius: 6px; font-weight: 900; font-size: 10px;">⚡ MED</span></td>
+        <td data-label="Status" style="padding: 12px; border-bottom: 1px solid #f1f5f9; text-align: center;"><span contenteditable="false" class="task-checkbox" style="cursor: pointer; user-select: none;">⬜</span> In Progress</td>
+      </tr>
+    </tbody>
+  </table>
+</div>`,
+    customBullets: ['•', '⚡', '🎯', '🔥'],
+    customChecklists: ['⬜', '✅', '🟢'],
+    defaultListType: 'checklist',
+    defaultMarker: '⬜',
+    themeColor: 'sky',
+    createdAt: new Date().toISOString(),
+    isSystem: true
+  },
+  {
+    id: 'sys_template_resource_tracker',
+    name: 'Resource & Link Library',
+    description: 'Catalog academic papers, digital links, and video resources with categorized icons.',
+    content: `<h3>📚 Digital Resource Library</h3>
+<p>Consolidate all external learning materials and reference documentation.</p>
+<div class="table-scroll-container" style="overflow-x: auto; max-width: 100%; border-radius: 12px; margin: 16px 0; border: 1px solid rgba(0,0,0,0.1);">
+  <table class="card-stack" style="width: 100%; border-collapse: collapse; font-size: 13px;">
+    <thead>
+      <tr style="background-color: #f0f9ff; border-bottom: 2px solid #bae6fd;">
+        <th style="padding: 12px; text-align: left; font-weight: 800; text-transform: uppercase; color: #0369a1; font-size: 10px; width: 80px;">Type</th>
+        <th style="padding: 12px; text-align: left; font-weight: 800; text-transform: uppercase; color: #0369a1; font-size: 10px;">Resource Name</th>
+        <th style="padding: 12px; text-align: left; font-weight: 800; text-transform: uppercase; color: #0369a1; font-size: 10px;">Category</th>
+        <th style="padding: 12px; text-align: left; font-weight: 800; text-transform: uppercase; color: #0369a1; font-size: 10px; width: 100px;">Action</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td data-label="Type" style="padding: 12px; border-bottom: 1px solid #f1f5f9; text-align: center; font-size: 18px;">📄</td>
+        <td data-label="Name" style="padding: 12px; border-bottom: 1px solid #f1f5f9; font-weight: 700;">[Academic Paper Title]</td>
+        <td data-label="Cat" style="padding: 12px; border-bottom: 1px solid #f1f5f9;"><span style="background: #f0fdf4; color: #166534; padding: 2px 8px; border-radius: 6px; font-size: 10px;">RESEARCH</span></td>
+        <td data-label="Action" style="padding: 12px; border-bottom: 1px solid #f1f5f9;"><a href="#" style="color: #2563eb; font-weight: 800; text-decoration: none;">OPEN ↗</a></td>
+      </tr>
+      <tr>
+        <td data-label="Type" style="padding: 12px; border-bottom: 1px solid #f1f5f9; text-align: center; font-size: 18px;">🎬</td>
+        <td data-label="Name" style="padding: 12px; border-bottom: 1px solid #f1f5f9; font-weight: 700;">[Lecture Video URL]</td>
+        <td data-label="Cat" style="padding: 12px; border-bottom: 1px solid #f1f5f9;"><span style="background: #fef2f2; color: #991b1b; padding: 2px 8px; border-radius: 6px; font-size: 10px;">VIDEO</span></td>
+        <td data-label="Action" style="padding: 12px; border-bottom: 1px solid #f1f5f9;"><a href="#" style="color: #2563eb; font-weight: 800; text-decoration: none;">WATCH ↗</a></td>
+      </tr>
+    </tbody>
+  </table>
+</div>`,
+    customBullets: ['•', '🔗', '📄', '🎬'],
+    customChecklists: ['⬜', '✅'],
+    defaultListType: 'bullet',
+    defaultMarker: '🔗',
+    themeColor: 'sky',
     createdAt: new Date().toISOString(),
     isSystem: true
   }
@@ -335,8 +418,8 @@ export const TemplatesPanel: React.FC<TemplatesPanelProps> = ({
   };
 
   // HTML Snippet Insertion Handler
-  const insertSpecialBlock = (type: 'synthesis' | 'brainstorm' | 'qa' | 'proscons' | 'threecols' | 'fourcols', colorObj: typeof insertionColors[0]) => {
-    const { hex, bg, border, text, name } = colorObj;
+  const insertSpecialBlock = (type: 'synthesis' | 'brainstorm' | 'qa' | 'proscons' | 'threecols' | 'fourcols' | 'taskmatrix' | 'resourcelibrary', colorObj: typeof insertionColors[0]) => {
+    const { hex, bg, border, text, name, dot } = colorObj;
     let snippet = '';
 
     if (type === 'synthesis') {
@@ -452,6 +535,48 @@ export const TemplatesPanel: React.FC<TemplatesPanelProps> = ({
     </div>
   </div>
  </div><p></p>`;
+    } else if (type === 'taskmatrix') {
+      snippet = `<div class="table-scroll-container" style="overflow-x: auto; max-width: 100%; border-radius: 12px; margin: 16px 0; border: 1px solid ${border};">
+  <table class="card-stack" style="width: 100%; border-collapse: collapse; font-size: 13px;">
+    <thead>
+      <tr style="background-color: ${bg}; border-bottom: 2px solid ${border};">
+        <th style="padding: 12px; text-align: left; font-weight: 800; text-transform: uppercase; color: ${text}; font-size: 10px; width: 50px;">No.</th>
+        <th style="padding: 12px; text-align: left; font-weight: 800; text-transform: uppercase; color: ${text}; font-size: 10px;">Strategic Task</th>
+        <th style="padding: 12px; text-align: center; font-weight: 800; text-transform: uppercase; color: ${text}; font-size: 10px; width: 100px;">Priority</th>
+        <th style="padding: 12px; text-align: center; font-weight: 800; text-transform: uppercase; color: ${text}; font-size: 10px; width: 120px;">Status</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td data-label="No." style="padding: 12px; border-bottom: 1px solid #f1f5f9; text-align: center; font-weight: 800;">1</td>
+        <td data-label="Task" style="padding: 12px; border-bottom: 1px solid #f1f5f9;">[Enter Primary Focus]</td>
+        <td data-label="Priority" style="padding: 12px; border-bottom: 1px solid #f1f5f9; text-align: center;"><span style="background: #fef2f2; color: #ef4444; padding: 2px 8px; border-radius: 6px; font-weight: 900; font-size: 10px;">🔥 HIGH</span></td>
+        <td data-label="Status" style="padding: 12px; border-bottom: 1px solid #f1f5f9; text-align: center;"><span contenteditable="false" class="task-checkbox" style="cursor: pointer; user-select: none;">⬜</span> Pending</td>
+      </tr>
+    </tbody>
+  </table>
+</div><p></p>`;
+    } else if (type === 'resourcelibrary') {
+      snippet = `<div class="table-scroll-container" style="overflow-x: auto; max-width: 100%; border-radius: 12px; margin: 16px 0; border: 1px solid ${border};">
+  <table class="card-stack" style="width: 100%; border-collapse: collapse; font-size: 13px;">
+    <thead>
+      <tr style="background-color: ${bg}; border-bottom: 2px solid ${border};">
+        <th style="padding: 12px; text-align: left; font-weight: 800; text-transform: uppercase; color: ${text}; font-size: 10px; width: 80px;">Type</th>
+        <th style="padding: 12px; text-align: left; font-weight: 800; text-transform: uppercase; color: ${text}; font-size: 10px;">Resource Name</th>
+        <th style="padding: 12px; text-align: left; font-weight: 800; text-transform: uppercase; color: ${text}; font-size: 10px;">Category</th>
+        <th style="padding: 12px; text-align: left; font-weight: 800; text-transform: uppercase; color: ${text}; font-size: 10px; width: 100px;">Action</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td data-label="Type" style="padding: 12px; border-bottom: 1px solid #f1f5f9; text-align: center; font-size: 18px;">📄</td>
+        <td data-label="Name" style="padding: 12px; border-bottom: 1px solid #f1f5f9; font-weight: 700;">[Academic Paper Title]</td>
+        <td data-label="Cat" style="padding: 12px; border-bottom: 1px solid #f1f5f9;"><span style="background: #f0fdf4; color: #166534; padding: 2px 8px; border-radius: 6px; font-size: 10px;">RESEARCH</span></td>
+        <td data-label="Action" style="padding: 12px; border-bottom: 1px solid #f1f5f9;"><a href="#" style="color: #2563eb; font-weight: 800; text-decoration: none;">OPEN ↗</a></td>
+      </tr>
+    </tbody>
+  </table>
+</div><p></p>`;
     }
 
     setFormContent(prev => prev + snippet);
@@ -1073,6 +1198,89 @@ export const TemplatesPanel: React.FC<TemplatesPanelProps> = ({
                         <span className="text-[14px] leading-none mb-0.5 text-white">⚖️</span>
                       </button>
                     ))}
+                  </div>
+                </div>
+
+                {/* Task Matrix Table Selector */}
+                <div className="space-y-1.5 bg-white p-3 rounded-2xl border border-slate-100 shadow-sm">
+                  <span className="text-[9px] font-black text-slate-700 uppercase flex items-center gap-1">
+                    <Activity size={13} className="text-rose-500" /> Insert Task Matrix Table
+                  </span>
+                  <div className="grid grid-cols-5 gap-1.5 pt-1">
+                    {insertionColors.map((colorObj, idx) => (
+                      <button 
+                        key={idx}
+                        type="button"
+                        onClick={() => insertSpecialBlock('taskmatrix', colorObj)}
+                        className={`w-7 h-7 rounded-full border border-slate-100 flex items-center justify-center hover:scale-115 active:scale-90 transition-all ${colorObj.dot} bg-opacity-90 shadow-sm`}
+                        title={`Task Matrix Table block in ${colorObj.name}`}
+                      >
+                        <span className="text-[14px] leading-none mb-0.5 text-white">📊</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Resource Library Table Selector */}
+                <div className="space-y-1.5 bg-white p-3 rounded-2xl border border-slate-100 shadow-sm">
+                  <span className="text-[9px] font-black text-slate-700 uppercase flex items-center gap-1">
+                    <BookOpen size={13} className="text-cyan-500" /> Insert Resource Library
+                  </span>
+                  <div className="grid grid-cols-5 gap-1.5 pt-1">
+                    {insertionColors.map((colorObj, idx) => (
+                      <button 
+                        key={idx}
+                        type="button"
+                        onClick={() => insertSpecialBlock('resourcelibrary', colorObj)}
+                        className={`w-7 h-7 rounded-full border border-slate-100 flex items-center justify-center hover:scale-115 active:scale-90 transition-all ${colorObj.dot} bg-opacity-90 shadow-sm`}
+                        title={`Resource Library Table block in ${colorObj.name}`}
+                      >
+                        <span className="text-[14px] leading-none mb-0.5 text-white">📚</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Smart Components Injection (Small Blocks) */}
+                <div className="space-y-3 bg-white p-3 rounded-2xl border border-slate-100 shadow-sm">
+                  <div>
+                    <span className="text-[9px] font-black text-slate-700 uppercase flex items-center gap-1">
+                      <Zap size={13} className="text-orange-500" /> Smart Components
+                    </span>
+                    <p className="text-[8px] text-slate-400 font-bold uppercase mt-0.5">Insert interactive elements into tables or text</p>
+                  </div>
+                  
+                  <div className="flex flex-wrap gap-2">
+                    <button 
+                      onClick={() => {
+                        const html = '<span contenteditable="false" class="task-checkbox" style="cursor: pointer; user-select: none; margin-right: 4px;">⬜</span>';
+                        setFormContent(prev => prev + html);
+                        showFeedback('Inserted Smart Checkbox!');
+                      }}
+                      className="px-2 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-[9px] font-black text-slate-600 uppercase hover:bg-orange-50 hover:text-orange-600 transition-all flex items-center gap-1"
+                    >
+                      <CheckSquare size={10} /> Smart Box
+                    </button>
+                    <button 
+                      onClick={() => {
+                        const html = '<span style="background: #fef2f2; color: #ef4444; padding: 2px 8px; border-radius: 6px; font-weight: 900; font-size: 10px; margin: 0 4px;">🔥 HIGH</span>';
+                        setFormContent(prev => prev + html);
+                        showFeedback('Inserted High Priority Badge!');
+                      }}
+                      className="px-2 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-[9px] font-black text-slate-600 uppercase hover:bg-red-50 hover:text-red-600 transition-all flex items-center gap-1"
+                    >
+                      <Star size={10} /> High Badge
+                    </button>
+                    <button 
+                      onClick={() => {
+                        const html = '<span style="background: #f0fdf4; color: #166534; padding: 2px 8px; border-radius: 6px; font-weight: 900; font-size: 10px; margin: 0 4px;">✅ DONE</span>';
+                        setFormContent(prev => prev + html);
+                        showFeedback('Inserted Done Badge!');
+                      }}
+                      className="px-2 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-[9px] font-black text-slate-600 uppercase hover:bg-emerald-50 hover:text-emerald-600 transition-all flex items-center gap-1"
+                    >
+                      <Check size={10} /> Done Badge
+                    </button>
                   </div>
                 </div>
 

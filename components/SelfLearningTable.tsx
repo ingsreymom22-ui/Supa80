@@ -141,6 +141,7 @@ export const SelfLearningTable: React.FC<SelfLearningTableProps> = ({ data, onUp
   const [isArchiveFolderOpen, setIsArchiveFolderOpen] = useState(false);
   const [sidebarFilter, setSidebarFilter] = useState<string>('files');
   const [sortOrder, setSortOrder] = useState<'manual' | 'alpha-asc' | 'alpha-desc' | 'newest' | 'oldest'>('manual');
+  const [subTopicSortOrder, setSubTopicSortOrder] = useState<'manual' | 'alpha-asc' | 'alpha-desc' | 'newest' | 'oldest'>('manual');
 
   // Cross-Platform Persistent Scrollbar Trackers
   const sidebarScrollRef = useRef<HTMLDivElement>(null);
@@ -258,27 +259,31 @@ export const SelfLearningTable: React.FC<SelfLearningTableProps> = ({ data, onUp
       }));
   };
 
-  const sortTopicsRecursive = (items: DPSSTopic[]): DPSSTopic[] => {
-    if (sortOrder === 'manual') return items;
+  const sortTopicsRecursive = (items: DPSSTopic[], level: number = 0): DPSSTopic[] => {
+    const currentSortOrder = level === 0 ? sortOrder : subTopicSortOrder;
+    
+    let processedItems = [...items];
 
-    const sorted = [...items].sort((a, b) => {
-      switch (sortOrder) {
-        case 'alpha-asc':
-          return a.title.localeCompare(b.title);
-        case 'alpha-desc':
-          return b.title.localeCompare(a.title);
-        case 'newest':
-          return (b.createdAt || 0) - (a.createdAt || 0);
-        case 'oldest':
-          return (a.createdAt || 0) - (b.createdAt || 0);
-        default:
-          return 0;
-      }
-    });
+    if (currentSortOrder !== 'manual') {
+      processedItems.sort((a, b) => {
+        switch (currentSortOrder) {
+          case 'alpha-asc':
+            return a.title.localeCompare(b.title);
+          case 'alpha-desc':
+            return b.title.localeCompare(a.title);
+          case 'newest':
+            return (b.createdAt || 0) - (a.createdAt || 0);
+          case 'oldest':
+            return (a.createdAt || 0) - (b.createdAt || 0);
+          default:
+            return 0;
+        }
+      });
+    }
 
-    return sorted.map(item => ({
+    return processedItems.map(item => ({
       ...item,
-      children: item.children ? sortTopicsRecursive(item.children) : []
+      children: item.children ? sortTopicsRecursive(item.children, level + 1) : []
     }));
   };
 
@@ -364,12 +369,12 @@ export const SelfLearningTable: React.FC<SelfLearningTableProps> = ({ data, onUp
   const filteredTopics = React.useMemo(() => {
     const items = filterTopicsBySearch(activeTopics, searchTerm);
     return sortTopicsRecursive(items);
-  }, [activeTopics, searchTerm, sortOrder]);
+  }, [activeTopics, searchTerm, sortOrder, subTopicSortOrder]);
 
   const filteredArchivedTopics = React.useMemo(() => {
     const items = filterTopicsBySearch(archivedTopics, searchTerm);
     return sortTopicsRecursive(items);
-  }, [archivedTopics, searchTerm, sortOrder]);
+  }, [archivedTopics, searchTerm, sortOrder, subTopicSortOrder]);
 
   // Auto-expand matched topics when searching
   useEffect(() => {
@@ -4818,12 +4823,33 @@ export const SelfLearningTable: React.FC<SelfLearningTableProps> = ({ data, onUp
                     ? 'bg-emerald-50 border-emerald-200 text-emerald-600 shadow-sm' 
                     : 'bg-slate-100 dark:bg-slate-900/40 border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 hover:bg-slate-200/50 dark:hover:bg-slate-800/60'
                 }`}
-                title={`Sort: ${sortOrder === 'manual' ? 'Manual' : sortOrder === 'alpha-asc' ? 'A-Z' : sortOrder === 'alpha-desc' ? 'Z-A' : sortOrder === 'newest' ? 'Newest' : 'Oldest'}`}
+                title={`Topic Sort: ${sortOrder === 'manual' ? 'Manual' : sortOrder === 'alpha-asc' ? 'A-Z' : sortOrder === 'alpha-desc' ? 'Z-A' : sortOrder === 'newest' ? 'Newest' : 'Oldest'}`}
               >
                 {sortOrder === 'manual' ? <Layers size={14} /> : 
                  sortOrder === 'alpha-asc' ? <ArrowDown size={14} /> : 
                  sortOrder === 'alpha-desc' ? <ArrowUp size={14} /> : 
                  <Calendar size={14} />}
+              </button>
+
+              <button
+                onClick={() => {
+                  const orders: ('manual' | 'alpha-asc' | 'alpha-desc' | 'newest' | 'oldest')[] = ['manual', 'alpha-asc', 'alpha-desc', 'newest', 'oldest'];
+                  const next = orders[(orders.indexOf(subTopicSortOrder) + 1) % orders.length];
+                  setSubTopicSortOrder(next);
+                }}
+                className={`shrink-0 p-2.5 rounded-xl transition-all border ${
+                  subTopicSortOrder !== 'manual' 
+                    ? 'bg-emerald-50 border-emerald-200 text-emerald-600 shadow-sm' 
+                    : 'bg-slate-100 dark:bg-slate-900/40 border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 hover:bg-slate-200/50 dark:hover:bg-slate-800/60'
+                }`}
+                title={`Subtopic Sort: ${subTopicSortOrder === 'manual' ? 'Manual' : subTopicSortOrder === 'alpha-asc' ? 'A-Z' : subTopicSortOrder === 'alpha-desc' ? 'Z-A' : subTopicSortOrder === 'newest' ? 'Newest' : 'Oldest'}`}
+              >
+                <div className="relative">
+                  <List size={14} />
+                  {subTopicSortOrder !== 'manual' && (
+                    <div className="absolute -top-1 -right-1 w-2 h-2 bg-emerald-500 rounded-full border border-white" />
+                  )}
+                </div>
               </button>
             </div>
 

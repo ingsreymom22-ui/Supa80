@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
-import { Zap, Undo, Redo, Plus, Trash2, Calendar, AlignLeft, AlignCenter, AlignRight, Highlighter, MousePointer2, Minus, Layout, Square, Quote, Settings2, FileUp, FileDown, Image as ImageIcon, Video, Music, FileText, Loader2, Wand2, Menu, ChevronLeft, GraduationCap, ChevronRight, Table, Grid3X3, LayoutGrid, Columns, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Palette, Italic, Underline, Strikethrough, Indent, Outdent, List, ListOrdered, CheckSquare, ChevronDown, MoreHorizontal, Download, Maximize2, Minimize2, Search, Archive, Folder, Star, Share2, Pencil, Lock, Unlock, ArrowRightLeft, Copy, GripVertical, Ruler, Sparkles, Layers, MessageSquare } from 'lucide-react';
+import { Zap, Undo, Redo, Plus, Trash2, Calendar, AlignLeft, AlignCenter, AlignRight, Highlighter, MousePointer2, Minus, Layout, Square, Quote, Settings2, FileUp, FileDown, Image as ImageIcon, Video, Music, FileText, Loader2, Wand2, Menu, ChevronLeft, GraduationCap, ChevronRight, Table, Grid3X3, LayoutGrid, Columns, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Palette, Italic, Underline, Strikethrough, Indent, Outdent, List, ListOrdered, CheckSquare, ChevronDown, MoreHorizontal, Download, Maximize2, Minimize2, Search, Archive, Folder, Star, Share2, Pencil, Lock, Unlock, ArrowRightLeft, Copy, GripVertical, Ruler, Sparkles, Layers, MessageSquare, Check, Bookmark, BookOpen, Activity, Scale } from 'lucide-react';
 import { AppData, DPSSTopic } from '../types';
 import { v4 as uuidv4 } from 'uuid';
 import { callNeuralEngine } from '../services/neuralEngine';
@@ -24,6 +24,36 @@ const BULLET_STYLES = [
 const CHECKLIST_STYLES = [
   '⬜', '✅', '☑️', '✓', '❌', '✗', '⭕', '🔘', '🟩', '🔴'
 ];
+
+const getCleanEditorHtml = (html: string): string => {
+  if (!html) return '';
+  const temp = document.createElement('div');
+  temp.innerHTML = html;
+  const spacers = temp.querySelectorAll('.table-spacer-click-zone');
+  spacers.forEach(s => s.remove());
+  return temp.innerHTML;
+};
+
+const ensureTableSpacers = (element: HTMLDivElement | null) => {
+  if (!element) return;
+  const tables = element.querySelectorAll('table');
+  tables.forEach(table => {
+    let next = table.nextSibling as HTMLElement | null;
+    while (next && next.nodeType === Node.TEXT_NODE && !next.textContent?.trim()) {
+      next = next.nextSibling as HTMLElement | null;
+    }
+    if (!next || !next.classList || !next.classList.contains('table-spacer-click-zone')) {
+      const spacer = document.createElement('div');
+      spacer.className = 'table-spacer-click-zone';
+      spacer.setAttribute('contenteditable', 'false');
+      if (table.nextSibling) {
+        table.parentNode?.insertBefore(spacer, table.nextSibling);
+      } else {
+        table.parentNode?.appendChild(spacer);
+      }
+    }
+  });
+};
 
 interface SelfLearningTableProps {
   data: AppData;
@@ -52,6 +82,9 @@ export const SelfLearningTable: React.FC<SelfLearningTableProps> = ({ data, onUp
   const [showTableToolsMenu, setShowTableToolsMenu] = useState(false);
   const [showPageOptions, setShowPageOptions] = useState(false);
   const [showListStyleMenu, setShowListStyleMenu] = useState<'bullet' | 'number' | 'check' | null>(null);
+  const [hoveredTable, setHoveredTable] = useState<HTMLTableElement | null>(null);
+  const [plusButtonPos, setPlusButtonPos] = useState<{ top: number, left: number } | null>(null);
+  const plusButtonTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const toggleDropdown = (menuName: 'export' | 'tableTools' | 'more' | 'moreTools' | 'pageOptions') => {
     setShowExportMenu(menuName === 'export' ? !showExportMenu : false);
@@ -65,6 +98,19 @@ export const SelfLearningTable: React.FC<SelfLearningTableProps> = ({ data, onUp
   const [isToolbarHidden, setIsToolbarHidden] = useState(() => {
     return localStorage.getItem('self_learning_toolbar_hidden') === 'true';
   });
+  const [isToolbarFloating, setIsToolbarFloating] = useState(false);
+  const [isToolbarMaximized, setIsToolbarMaximized] = useState(false);
+  const [toolbarPos, setToolbarPos] = useState({ x: 250, y: 150 });
+  const [isDraggingToolbar, setIsDraggingToolbar] = useState(false);
+  const [isToolbarLocked, setIsToolbarLocked] = useState(false);
+  const toolbarDragOffset = useRef({ x: 0, y: 0 });
+
+  useEffect(() => {
+    localStorage.setItem('self_learning_toolbar_hidden', String(isToolbarHidden));
+  }, [isToolbarHidden]);
+
+  // Removed old useEffect for dragging in favor of pointer events
+
   const [pickerPos, setPickerPos] = useState<{ x: number, y: number } | null>(null);
   const [pickerOffset, setPickerOffset] = useState({ x: 0, y: 0 });
   const [isDraggingPicker, setIsDraggingPicker] = useState(false);
@@ -137,7 +183,13 @@ export const SelfLearningTable: React.FC<SelfLearningTableProps> = ({ data, onUp
   const [cloudShareError, setCloudShareError] = useState<string | null>(null);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [importJsonText, setImportJsonText] = useState('');
+  const [feedback, setFeedback] = useState<string | null>(null);
   const [isCopiedJson, setIsCopiedJson] = useState(false);
+
+  const showFeedback = (msg: string) => {
+    setFeedback(msg);
+    setTimeout(() => setFeedback(null), 3000);
+  };
   const [isArchiveFolderOpen, setIsArchiveFolderOpen] = useState(false);
   const [sidebarFilter, setSidebarFilter] = useState<string>('files');
   const [sortOrder, setSortOrder] = useState<'manual' | 'alpha-asc' | 'alpha-desc' | 'newest' | 'oldest'>('manual');
@@ -431,14 +483,10 @@ export const SelfLearningTable: React.FC<SelfLearningTableProps> = ({ data, onUp
   }, []);
 
   useEffect(() => {
-    if (topics.length > 0) {
-      if (!selectedTopicId) {
-        setSelectedTopicId(topics[0].id);
-      }
-    } else {
+    if (topics.length === 0) {
       setSelectedTopicId(null);
     }
-  }, [topics, selectedTopicId]);
+  }, [topics]);
 
   const isResizing = useRef(false);
   const isResizingTableCol = useRef(false);
@@ -453,13 +501,15 @@ export const SelfLearningTable: React.FC<SelfLearningTableProps> = ({ data, onUp
   const inputTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const handleEditorInput = (e: React.FormEvent<HTMLDivElement>) => {
+    ensureTableSpacers(editorRef.current);
     if (inputTimeoutRef.current) clearTimeout(inputTimeoutRef.current);
     inputTimeoutRef.current = setTimeout(() => {
       if (editorRef.current && selectedTopic) {
         // Only trigger update if the content has actually changed to avoid unnecessary saves
         const currentHtml = editorRef.current.innerHTML;
-        if (currentHtml !== selectedTopic.content) {
-          updateTopic(selectedTopic.id, { content: currentHtml });
+        const cleanHtml = getCleanEditorHtml(currentHtml);
+        if (cleanHtml !== selectedTopic.content) {
+          updateTopic(selectedTopic.id, { content: cleanHtml });
         }
       }
     }, 500);
@@ -1838,12 +1888,8 @@ export const SelfLearningTable: React.FC<SelfLearningTableProps> = ({ data, onUp
     } else {
       onUpdate({ ...data, selfLearningTopics: updated });
     }
-    setSelectedTopicId(newTopic.id);
     if (parentId) {
       setExpandedTopics(prev => ({ ...prev, [parentId]: true }));
-    }
-    if (window.innerWidth < 768) {
-       setIsSidebarOpen(false);
     }
   };
 
@@ -1975,11 +2021,15 @@ export const SelfLearningTable: React.FC<SelfLearningTableProps> = ({ data, onUp
   };
 
   const updateTopic = (id: string, updates: Partial<DPSSTopic>) => {
+    const cleanUpdates = { ...updates };
+    if (typeof cleanUpdates.content === 'string') {
+      cleanUpdates.content = getCleanEditorHtml(cleanUpdates.content);
+    }
     const updateItems = (items: DPSSTopic[]): DPSSTopic[] => {
       if (!Array.isArray(items)) return items;
       return items.map(item => {
         if (!item) return item;
-        if (item.id === id) return { ...item, ...updates };
+        if (item.id === id) return { ...item, ...cleanUpdates };
         if (item.children) return { ...item, children: updateItems(item.children as any[]) };
         return item;
       });
@@ -2594,6 +2644,192 @@ export const SelfLearningTable: React.FC<SelfLearningTableProps> = ({ data, onUp
     }
   };
 
+  const insertSmartCheckMatrix = () => {
+    const html = `
+<div class="table-scroll-container" style="overflow-x: auto; max-width: 100%; -webkit-overflow-scrolling: touch; border-radius: 12px; margin: 16px 0; border: 1px solid #cbd5e1;">
+  <table class="compact-table" style="width: 100%; border-collapse: collapse; font-size: 13px;">
+    <thead>
+      <tr style="background-color: #f1f5f9; border-bottom: 2px solid #cbd5e1;">
+        <th style="padding: 10px; text-align: left; font-weight: 800; text-transform: uppercase; color: #475569; font-size: 10px;">Strategic Item</th>
+        <th style="padding: 10px; text-align: center; font-weight: 800; text-transform: uppercase; color: #475569; font-size: 10px; width: 60px;">Status A</th>
+        <th style="padding: 10px; text-align: center; font-weight: 800; text-transform: uppercase; color: #475569; font-size: 10px; width: 60px;">Status B</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td style="padding: 8px; border-bottom: 1px solid #f1f5f9; font-weight: 700;">[Requirement 1]</td>
+        <td class="smart-check-cell" style="padding: 8px; border-bottom: 1px solid #f1f5f9; text-align: center; color: #10b981;">✅</td>
+        <td class="smart-check-cell" style="padding: 8px; border-bottom: 1px solid #f1f5f9; text-align: center; color: #ef4444;">❌</td>
+      </tr>
+    </tbody>
+  </table>
+</div><p><br></p>`;
+
+    if (editorRef.current) {
+      editorRef.current.focus();
+      if (savedRange.current) {
+        const selection = window.getSelection();
+        selection?.removeAllRanges();
+        selection?.addRange(savedRange.current);
+      }
+      document.execCommand('insertHTML', false, html);
+      if (selectedTopic) {
+        updateTopic(selectedTopic.id, { content: editorRef.current.innerHTML });
+      }
+    }
+  };
+
+  const insertResourceLibrary = (theme = 'cyan') => {
+    if (!selectedTopic) return;
+    const configs: Record<string, { border: string; bg: string; text: string }> = {
+      violet: { border: '#ddd6fe', bg: '#f5f3ff', text: '#6d28d9' },
+      emerald: { border: '#bbf7d0', bg: '#f0fdf4', text: '#047857' },
+      rose: { border: '#fecdd3', bg: '#fff1f2', text: '#be123c' },
+      blue: { border: '#bfdbfe', bg: '#f0f7ff', text: '#1d4ed8' },
+      gold: { border: '#fef08a', bg: '#fefce8', text: '#a16207' },
+      slate: { border: '#cbd5e1', bg: '#f8fafc', text: '#334155' },
+      indigo: { border: '#c7d2fe', bg: '#eef2ff', text: '#4338ca' },
+      amber: { border: '#fde68a', bg: '#fffbeb', text: '#b45309' },
+      sky: { border: '#bae6fd', bg: '#f0f9ff', text: '#0284c7' },
+      teal: { border: '#99f6e4', bg: '#f0fdfa', text: '#0d9488' },
+      cyan: { border: '#a5f3fc', bg: '#ecfeff', text: '#0e7490' }
+    };
+    const c = configs[theme] || configs.cyan;
+    const html = `<div class="table-scroll-container" style="overflow-x: auto; max-width: 100%; border-radius: 12px; margin: 16px 0; border: 1px solid ${c.border};">
+  <table class="card-stack" style="width: 100%; border-collapse: collapse; font-size: 13px;">
+    <thead>
+      <tr style="background-color: ${c.bg}; border-bottom: 2px solid ${c.border};">
+        <th style="padding: 12px; text-align: left; font-weight: 800; text-transform: uppercase; color: ${c.text}; font-size: 10px; width: 80px;">Type</th>
+        <th style="padding: 12px; text-align: left; font-weight: 800; text-transform: uppercase; color: ${c.text}; font-size: 10px;">Resource Name</th>
+        <th style="padding: 12px; text-align: left; font-weight: 800; text-transform: uppercase; color: ${c.text}; font-size: 10px;">Category</th>
+        <th style="padding: 12px; text-align: left; font-weight: 800; text-transform: uppercase; color: ${c.text}; font-size: 10px; width: 100px;">Action</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td data-label="Type" style="padding: 12px; border-bottom: 1px solid #f1f5f9; text-align: center; font-size: 18px;">📄</td>
+        <td data-label="Name" style="padding: 12px; border-bottom: 1px solid #f1f5f9; font-weight: 700;">[Academic Paper Title]</td>
+        <td data-label="Cat" style="padding: 12px; border-bottom: 1px solid #f1f5f9;"><span style="background: #f0fdf4; color: #166534; padding: 2px 8px; border-radius: 6px; font-size: 10px;">RESEARCH</span></td>
+        <td data-label="Action" style="padding: 12px; border-bottom: 1px solid #f1f5f9;"><a href="#" style="color: #2563eb; font-weight: 800; text-decoration: none;">OPEN ↗</a></td>
+      </tr>
+    </tbody>
+  </table>
+ </div><p><br></p>`;
+
+    if (editorRef.current) {
+      editorRef.current.focus();
+      if (savedRange.current) {
+        const selection = window.getSelection();
+        selection?.removeAllRanges();
+        selection?.addRange(savedRange.current);
+      }
+      document.execCommand('insertHTML', false, html);
+      if (selectedTopic) {
+        updateTopic(selectedTopic.id, { content: editorRef.current.innerHTML });
+      }
+    }
+  };
+
+  const insertTaskMatrix = (theme = 'rose') => {
+    if (!selectedTopic) return;
+    const configs: Record<string, { border: string; bg: string; text: string }> = {
+      violet: { border: '#ddd6fe', bg: '#f5f3ff', text: '#6d28d9' },
+      emerald: { border: '#bbf7d0', bg: '#f0fdf4', text: '#047857' },
+      rose: { border: '#fecdd3', bg: '#fff1f2', text: '#be123c' },
+      blue: { border: '#bfdbfe', bg: '#f0f7ff', text: '#1d4ed8' },
+      gold: { border: '#fef08a', bg: '#fefce8', text: '#a16207' },
+      slate: { border: '#cbd5e1', bg: '#f8fafc', text: '#334155' },
+      indigo: { border: '#c7d2fe', bg: '#eef2ff', text: '#4338ca' },
+      amber: { border: '#fde68a', bg: '#fffbeb', text: '#b45309' },
+      sky: { border: '#bae6fd', bg: '#f0f9ff', text: '#0284c7' },
+      teal: { border: '#99f6e4', bg: '#f0fdfa', text: '#0d9488' }
+    };
+    const c = configs[theme] || configs.rose;
+    const html = `<div class="table-scroll-container" style="overflow-x: auto; max-width: 100%; border-radius: 12px; margin: 16px 0; border: 1px solid ${c.border};">
+  <table class="card-stack" style="width: 100%; border-collapse: collapse; font-size: 13px;">
+    <thead>
+      <tr style="background-color: ${c.bg}; border-bottom: 2px solid ${c.border};">
+        <th style="padding: 12px; text-align: left; font-weight: 800; text-transform: uppercase; color: ${c.text}; font-size: 10px; width: 50px;">No.</th>
+        <th style="padding: 12px; text-align: left; font-weight: 800; text-transform: uppercase; color: ${c.text}; font-size: 10px;">Strategic Task</th>
+        <th style="padding: 12px; text-align: center; font-weight: 800; text-transform: uppercase; color: ${c.text}; font-size: 10px; width: 100px;">Priority</th>
+        <th style="padding: 12px; text-align: center; font-weight: 800; text-transform: uppercase; color: ${c.text}; font-size: 10px; width: 120px;">Status</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td data-label="No." style="padding: 12px; border-bottom: 1px solid #f1f5f9; text-align: center; font-weight: 800;">1</td>
+        <td data-label="Task" style="padding: 12px; border-bottom: 1px solid #f1f5f9;">[Enter Primary Focus]</td>
+        <td data-label="Priority" style="padding: 12px; border-bottom: 1px solid #f1f5f9; text-align: center;"><span style="background: #fef2f2; color: #ef4444; padding: 2px 8px; border-radius: 6px; font-weight: 900; font-size: 10px;">🔥 HIGH</span></td>
+        <td data-label="Status" style="padding: 12px; border-bottom: 1px solid #f1f5f9; text-align: center;"><span contenteditable="false" class="task-checkbox" style="cursor: pointer; user-select: none;">⬜</span> Pending</td>
+      </tr>
+    </tbody>
+  </table>
+ </div><p><br></p>`;
+
+    if (editorRef.current) {
+      editorRef.current.focus();
+      if (savedRange.current) {
+        const selection = window.getSelection();
+        selection?.removeAllRanges();
+        selection?.addRange(savedRange.current);
+      }
+      document.execCommand('insertHTML', false, html);
+      if (selectedTopic) {
+        updateTopic(selectedTopic.id, { content: editorRef.current.innerHTML });
+      }
+    }
+  };
+
+  const insertResearchLibrary = (theme = 'indigo') => {
+    if (!selectedTopic) return;
+    const configs: Record<string, { border: string; bg: string; text: string }> = {
+      violet: { border: '#ddd6fe', bg: '#f5f3ff', text: '#6d28d9' },
+      emerald: { border: '#bbf7d0', bg: '#f0fdf4', text: '#047857' },
+      rose: { border: '#fecdd3', bg: '#fff1f2', text: '#be123c' },
+      blue: { border: '#bfdbfe', bg: '#f0f7ff', text: '#1d4ed8' },
+      gold: { border: '#fef08a', bg: '#fefce8', text: '#a16207' },
+      slate: { border: '#cbd5e1', bg: '#f8fafc', text: '#334155' },
+      indigo: { border: '#c7d2fe', bg: '#eef2ff', text: '#4338ca' },
+      amber: { border: '#fde68a', bg: '#fffbeb', text: '#b45309' },
+      sky: { border: '#bae6fd', bg: '#f0f9ff', text: '#0284c7' },
+      teal: { border: '#99f6e4', bg: '#f0fdfa', text: '#0d9488' }
+    };
+    const c = configs[theme] || configs.indigo;
+    const html = `<div class="table-scroll-container" style="overflow-x: auto; max-width: 100%; border-radius: 12px; margin: 16px 0; border: 1px solid ${c.border};">
+  <table class="card-stack" style="width: 100%; border-collapse: collapse; font-size: 13px;">
+    <thead>
+      <tr style="background-color: ${c.bg}; border-bottom: 2px solid ${c.border};">
+        <th style="padding: 12px; text-align: left; font-weight: 800; text-transform: uppercase; color: ${c.text}; font-size: 10px; width: 80px;">Type</th>
+        <th style="padding: 12px; text-align: left; font-weight: 800; text-transform: uppercase; color: ${c.text}; font-size: 10px;">Resource Name</th>
+        <th style="padding: 12px; text-align: left; font-weight: 800; text-transform: uppercase; color: ${c.text}; font-size: 10px;">Category</th>
+        <th style="padding: 12px; text-align: left; font-weight: 800; text-transform: uppercase; color: ${c.text}; font-size: 10px; width: 100px;">Action</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td data-label="Type" style="padding: 12px; border-bottom: 1px solid #f1f5f9; text-align: center; font-size: 18px;">📄</td>
+        <td data-label="Name" style="padding: 12px; border-bottom: 1px solid #f1f5f9; font-weight: 700;">[Academic Paper Title]</td>
+        <td data-label="Cat" style="padding: 12px; border-bottom: 1px solid #f1f5f9;"><span style="background: #f0fdf4; color: #166534; padding: 2px 8px; border-radius: 6px; font-size: 10px;">RESEARCH</span></td>
+        <td data-label="Action" style="padding: 12px; border-bottom: 1px solid #f1f5f9;"><a href="#" style="color: #2563eb; font-weight: 800; text-decoration: none;">OPEN ↗</a></td>
+      </tr>
+    </tbody>
+  </table>
+ </div><p><br></p>`;
+
+    if (editorRef.current) {
+      editorRef.current.focus();
+      if (savedRange.current) {
+        const selection = window.getSelection();
+        selection?.removeAllRanges();
+        selection?.addRange(savedRange.current);
+      }
+      document.execCommand('insertHTML', false, html);
+      if (selectedTopic) {
+        updateTopic(selectedTopic.id, { content: editorRef.current.innerHTML });
+      }
+    }
+  };
+
   const insertProsConsCard = (theme = 'emerald') => {
     if (!selectedTopic) return;
     const configs: Record<string, { border: string; bg: string; title: string; desc: string; inner: string }> = {
@@ -2878,6 +3114,30 @@ export const SelfLearningTable: React.FC<SelfLearningTableProps> = ({ data, onUp
   const handleEditorClick = (e: React.MouseEvent) => {
     checkActiveTableCell();
     const target = e.target as HTMLElement;
+
+    if (target.classList?.contains('table-spacer-click-zone')) {
+      e.preventDefault();
+      e.stopPropagation();
+      const p = document.createElement('p');
+      p.innerHTML = '<br>';
+      target.parentNode?.insertBefore(p, target);
+      
+      const selection = window.getSelection();
+      if (selection) {
+        const range = document.createRange();
+        range.setStart(p, 0);
+        range.collapse(true);
+        selection.removeAllRanges();
+        selection.addRange(range);
+        p.focus();
+      }
+      
+      if (editorRef.current && selectedTopic) {
+        ensureTableSpacers(editorRef.current);
+        updateTopic(selectedTopic.id, { content: getCleanEditorHtml(editorRef.current.innerHTML) });
+      }
+      return;
+    }
     
     // Normalize focus if clicking on the container but not a child
     if (target === editorRef.current) {
@@ -2918,6 +3178,23 @@ export const SelfLearningTable: React.FC<SelfLearningTableProps> = ({ data, onUp
             if (selectedTopic?.id && editorRef.current) {
                 updateTopic(selectedTopic.id, { content: editorRef.current.innerHTML });
             }
+        }
+    }
+
+    const smartCheckCell = target.closest('.smart-check-cell') as HTMLElement | null;
+    if (smartCheckCell) {
+        const text = smartCheckCell.innerText.trim();
+        const toggles: Record<string, {text: string, color: string}> = {
+            '✅': {text: '❌', color: '#ef4444'},
+            '❌': {text: '', color: ''},
+            '': {text: '✅', color: '#10b981'},
+            ' ': {text: '✅', color: '#10b981'}
+        };
+        const next = toggles[text] || toggles[''];
+        smartCheckCell.innerText = next.text;
+        smartCheckCell.style.color = next.color;
+        if (selectedTopic?.id && editorRef.current) {
+            updateTopic(selectedTopic.id, { content: editorRef.current.innerHTML });
         }
     }
   };
@@ -3054,7 +3331,7 @@ export const SelfLearningTable: React.FC<SelfLearningTableProps> = ({ data, onUp
     }
   };
 
-  const addColumn = (position: 'left' | 'right') => {
+  const addColumn = (position: 'left' | 'right', isSmart: boolean = false) => {
     if (!activeTableCell) return;
     const cell = activeTableCell;
     const row = cell.parentElement as HTMLTableRowElement;
@@ -3076,7 +3353,7 @@ export const SelfLearningTable: React.FC<SelfLearningTableProps> = ({ data, onUp
     // Add col in colgroup
     const colToInsertBefore = colgroup.children[position === 'left' ? colIdx : colIdx + 1];
     const newCol = document.createElement('col');
-    newCol.style.width = '100px';
+    newCol.style.width = isSmart ? '60px' : '100px';
     if (colToInsertBefore) {
       colgroup.insertBefore(newCol, colToInsertBefore);
     } else {
@@ -3084,7 +3361,7 @@ export const SelfLearningTable: React.FC<SelfLearningTableProps> = ({ data, onUp
     }
 
     // Add cell in every row inside this table
-    Array.from(table.rows).forEach(r => {
+    Array.from(table.rows).forEach((r, rowIdx) => {
       // If it's the <thead> header row spanning all cols, adjust colspan
       const headerCell = r.querySelector('th[colspan]');
       if (headerCell) {
@@ -3111,7 +3388,190 @@ export const SelfLearningTable: React.FC<SelfLearningTableProps> = ({ data, onUp
       const sourceCell = rowCells[0] || cell;
       newCell.style.cssText = sourceCell.style.cssText;
       (newCell as HTMLElement).style.width = '';
-      newCell.innerHTML = '&nbsp;';
+      
+      if (isSmart) {
+        newCell.style.width = '60px';
+        newCell.style.minWidth = '60px';
+        newCell.style.maxWidth = '60px';
+        if (r.closest('thead') || rowIdx === 0) {
+           newCell.innerHTML = 'STATUS';
+           newCell.style.textAlign = 'center';
+        } else {
+           newCell.className = 'smart-check-cell';
+           newCell.innerHTML = '✅';
+           newCell.style.color = '#10b981';
+           newCell.style.textAlign = 'center';
+        }
+      } else {
+        newCell.style.width = '100px';
+        newCell.style.minWidth = '100px';
+        newCell.innerHTML = '&nbsp;';
+      }
+    });
+
+    if (editorRef.current && selectedTopic) {
+      updateTopic(selectedTopic.id, { content: editorRef.current.innerHTML });
+    }
+  };
+
+  const copyColumn = () => {
+    if (!activeTableCell) return;
+    const cell = activeTableCell;
+    const row = cell.parentElement as HTMLTableRowElement;
+    const table = row?.closest('table');
+    if (!table) return;
+
+    ensureTableColgroup(table);
+    const colgroup = table.querySelector('colgroup');
+    if (!colgroup) return;
+
+    const cellsInRow = Array.from(row.cells);
+    const clickedCellIdx = cellsInRow.indexOf(cell);
+    let colIdx = 0;
+    for (let i = 0; i < clickedCellIdx; i++) {
+      colIdx += parseInt(cellsInRow[i].getAttribute('colspan') || '1', 10);
+    }
+    colIdx += parseInt(cell.getAttribute('colspan') || '1', 10) - 1;
+
+    // Add col in colgroup
+    const colToCopy = colgroup.children[colIdx] as HTMLElement;
+    const newCol = document.createElement('col');
+    if (colToCopy) {
+      newCol.style.width = colToCopy.style.width || '100px';
+    } else {
+      newCol.style.width = '100px';
+    }
+    const colToInsertBefore = colgroup.children[colIdx + 1];
+    if (colToInsertBefore) {
+      colgroup.insertBefore(newCol, colToInsertBefore);
+    } else {
+      colgroup.appendChild(newCol);
+    }
+
+    // Add cell in every row inside this table
+    Array.from(table.rows).forEach(r => {
+      // If it's the <thead> header row spanning all cols, adjust colspan
+      const headerCell = r.querySelector('th[colspan]');
+      if (headerCell) {
+        const currentColspan = parseInt(headerCell.getAttribute('colspan') || '1', 10);
+        headerCell.setAttribute('colspan', (currentColspan + 1).toString());
+        return;
+      }
+
+      // Find the cell index corresponding to colIdx
+      let cellIndexToInsert = 0;
+      let cellIndexToCopy = -1;
+      let accumulatedCols = 0;
+      const rowCells = Array.from(r.cells);
+      for (let i = 0; i < rowCells.length; i++) {
+        const span = parseInt(rowCells[i].getAttribute('colspan') || '1', 10);
+        if (accumulatedCols + span > colIdx) {
+          cellIndexToInsert = i + 1;
+          cellIndexToCopy = i;
+          break;
+        }
+        accumulatedCols += span;
+        cellIndexToInsert = i + 1;
+      }
+
+      if (cellIndexToCopy !== -1) {
+        const newCell = r.insertCell(cellIndexToInsert);
+        const sourceCell = rowCells[cellIndexToCopy];
+        // completely clone styles and content
+        newCell.style.cssText = sourceCell.style.cssText;
+        newCell.className = sourceCell.className; // copy smart-check-cell etc.
+        (newCell as HTMLElement).style.width = '';
+        newCell.innerHTML = sourceCell.innerHTML;
+      }
+    });
+
+    if (editorRef.current && selectedTopic) {
+      updateTopic(selectedTopic.id, { content: editorRef.current.innerHTML });
+    }
+  };
+
+  const moveColumn = (direction: 'left' | 'right') => {
+    if (!activeTableCell) return;
+    const cell = activeTableCell;
+    const row = cell.parentElement as HTMLTableRowElement;
+    const table = row?.closest('table');
+    if (!table) return;
+
+    ensureTableColgroup(table);
+    const colgroup = table.querySelector('colgroup');
+    if (!colgroup) return;
+
+    const cellsInRow = Array.from(row.cells);
+    const clickedCellIdx = cellsInRow.indexOf(cell);
+    let colIdx = 0;
+    for (let i = 0; i < clickedCellIdx; i++) {
+      colIdx += parseInt(cellsInRow[i].getAttribute('colspan') || '1', 10);
+    }
+    colIdx += parseInt(cell.getAttribute('colspan') || '1', 10) - 1;
+
+    // Check bounds
+    const totalCols = colgroup.children.length;
+    if (direction === 'left' && colIdx <= 0) return; // Can't move left
+    if (direction === 'right' && colIdx >= totalCols - 1) return; // Can't move right
+
+    const targetColIdx = direction === 'left' ? colIdx - 1 : colIdx + 1;
+
+    // Move col in colgroup
+    const colToMove = colgroup.children[colIdx];
+    const colTarget = colgroup.children[targetColIdx];
+    
+    if (direction === 'left') {
+      colgroup.insertBefore(colToMove, colTarget);
+    } else {
+      // right
+      const nextSibling = colTarget.nextElementSibling;
+      if (nextSibling) {
+        colgroup.insertBefore(colToMove, nextSibling);
+      } else {
+        colgroup.appendChild(colToMove);
+      }
+    }
+
+    // Swap cells in every row
+    Array.from(table.rows).forEach(r => {
+      // If it's the <thead> header row spanning all cols, skip
+      const headerCell = r.querySelector('th[colspan]');
+      if (headerCell && parseInt(headerCell.getAttribute('colspan') || '1', 10) === totalCols) {
+        return;
+      }
+
+      // Find the cell index corresponding to colIdx and targetColIdx
+      let cellIdx = -1;
+      let targetCellIdx = -1;
+      let accumulatedCols = 0;
+      const rowCells = Array.from(r.cells);
+      for (let i = 0; i < rowCells.length; i++) {
+        const span = parseInt(rowCells[i].getAttribute('colspan') || '1', 10);
+        if (accumulatedCols <= colIdx && accumulatedCols + span > colIdx) {
+          cellIdx = i;
+        }
+        if (accumulatedCols <= targetColIdx && accumulatedCols + span > targetColIdx) {
+          targetCellIdx = i;
+        }
+        accumulatedCols += span;
+      }
+
+      if (cellIdx !== -1 && targetCellIdx !== -1 && cellIdx !== targetCellIdx) {
+        const cToMove = rowCells[cellIdx];
+        const cTarget = rowCells[targetCellIdx];
+        
+        if (direction === 'left') {
+          r.insertBefore(cToMove, cTarget);
+        } else {
+          // right
+          const nextSibling = cTarget.nextElementSibling;
+          if (nextSibling) {
+            r.insertBefore(cToMove, nextSibling);
+          } else {
+            r.appendChild(cToMove);
+          }
+        }
+      }
     });
 
     if (editorRef.current && selectedTopic) {
@@ -3176,6 +3636,89 @@ export const SelfLearningTable: React.FC<SelfLearningTableProps> = ({ data, onUp
         }
       });
       setActiveTableCell(null);
+    }
+
+    if (editorRef.current && selectedTopic) {
+      updateTopic(selectedTopic.id, { content: editorRef.current.innerHTML });
+    }
+  };
+
+  const toggleColumnSmartCheck = () => {
+    if (!activeTableCell) return;
+    const cell = activeTableCell;
+    const row = cell.parentElement as HTMLTableRowElement;
+    const table = row?.closest('table');
+    if (!table) return;
+
+    const cellIdx = Array.from(row.cells).indexOf(cell);
+    if (cellIdx === -1) return;
+
+    // Check if any body cell in this column is already a smart-check-cell
+    let anySmart = false;
+    Array.from(table.rows).forEach((r, idx) => {
+      if (idx === 0) return; // skip header
+      const c = r.cells[cellIdx];
+      if (c && c.classList.contains('smart-check-cell')) {
+        anySmart = true;
+      }
+    });
+
+    // Toggle column-wide
+    Array.from(table.rows).forEach((r, idx) => {
+      const c = r.cells[cellIdx];
+      if (c) {
+        if (anySmart) {
+          if (idx !== 0) {
+             c.classList.remove('smart-check-cell');
+             c.style.color = '';
+             c.style.padding = '';
+             c.style.fontSize = '';
+             c.style.width = '';
+             c.style.minWidth = '';
+             c.style.maxWidth = '';
+          }
+        } else {
+          c.style.width = '60px';
+          c.style.minWidth = '60px';
+          c.style.maxWidth = '60px';
+          if (idx !== 0) {
+            c.classList.add('smart-check-cell');
+            const txt = c.innerText.trim();
+            if (txt !== '✅' && txt !== '❌') {
+              c.innerText = '✅';
+              c.style.color = '#10b981';
+            }
+          }
+        }
+      }
+    });
+
+    if (editorRef.current && selectedTopic) {
+      updateTopic(selectedTopic.id, { content: editorRef.current.innerHTML });
+    }
+  };
+
+  const toggleCellSmartCheck = () => {
+    if (!activeTableCell) return;
+    const cell = activeTableCell;
+    if (cell.classList.contains('smart-check-cell')) {
+      cell.classList.remove('smart-check-cell');
+      cell.style.color = '';
+      cell.style.padding = '';
+      cell.style.fontSize = '';
+      cell.style.width = '';
+      cell.style.minWidth = '';
+      cell.style.maxWidth = '';
+    } else {
+      cell.style.width = '60px';
+      cell.style.minWidth = '60px';
+      cell.style.maxWidth = '60px';
+      cell.classList.add('smart-check-cell');
+      const txt = cell.innerText.trim();
+      if (txt !== '✅' && txt !== '❌') {
+        cell.innerText = '✅';
+        cell.style.color = '#10b981';
+      }
     }
 
     if (editorRef.current && selectedTopic) {
@@ -3317,7 +3860,11 @@ export const SelfLearningTable: React.FC<SelfLearningTableProps> = ({ data, onUp
               newCell.style.cssText = sourceCell.style.cssText;
               newCell.style.width = ''; // Let colgroup handle width permanently!
               
-              if (c === 0) {
+              if (sourceCell.classList.contains('smart-check-cell')) {
+                newCell.className = 'smart-check-cell';
+                newCell.innerHTML = '✅';
+                newCell.style.color = '#10b981';
+              } else if (c === 0) {
                 const previousRowsCount = Array.from(table.rows).filter(r => !r.closest('thead')).length;
                 newCell.innerHTML = previousRowsCount.toString();
                 newCell.style.fontWeight = '800';
@@ -3580,6 +4127,45 @@ export const SelfLearningTable: React.FC<SelfLearningTableProps> = ({ data, onUp
         }
       });
 
+      // Auto-layout algorithm for pasted tables
+      const tables = div.querySelectorAll('table');
+      tables.forEach((table: any) => {
+        table.style.width = '100%';
+        table.style.tableLayout = 'auto';
+        table.style.borderCollapse = 'collapse';
+        table.style.margin = '1rem 0';
+        
+        const cells = table.querySelectorAll('th, td');
+        cells.forEach((cell: any) => {
+          // Remove excessive fixed widths
+          if (cell.style.width) {
+             const w = parseInt(cell.style.width);
+             if (w > 400) cell.style.width = 'auto';
+          }
+          cell.style.wordBreak = 'normal';
+          cell.style.overflowWrap = 'break-word';
+          cell.style.padding = '0.75rem';
+          cell.style.border = '1px solid #cbd5e1';
+        });
+
+        // Specific constraint for first column to prevent it from dominating
+        const firstColCells = table.querySelectorAll('tr td:first-child, tr th:first-child');
+        firstColCells.forEach((cell: any) => {
+          cell.style.maxWidth = '150px';
+          cell.style.minWidth = '50px';
+        });
+
+        // Wrap in scroll container for mobile responsiveness
+        const wrapper = document.createElement('div');
+        wrapper.className = 'table-scroll-container';
+        wrapper.setAttribute('style', 'overflow-x: auto; max-width: 100%; -webkit-overflow-scrolling: touch; border-radius: 8px; border: 1px solid #cbd5e1;');
+        
+        if (table.parentNode) {
+          table.parentNode.insertBefore(wrapper, table);
+          wrapper.appendChild(table);
+        }
+      });
+
       const fragment = document.createDocumentFragment();
       while (div.firstChild) {
         fragment.appendChild(div.firstChild);
@@ -3628,6 +4214,17 @@ export const SelfLearningTable: React.FC<SelfLearningTableProps> = ({ data, onUp
         cell.style.cursor = 'col-resize';
       } else {
         cell.style.cursor = '';
+      }
+    }
+
+    // Detect hovered table for the floating '+' insertion button
+    const table = target.closest('table') as HTMLTableElement | null;
+    if (!table) {
+      if (!plusButtonTimeoutRef.current) {
+        plusButtonTimeoutRef.current = setTimeout(() => {
+          setHoveredTable(null);
+          setPlusButtonPos(null);
+        }, 800);
       }
     }
   };
@@ -4069,6 +4666,37 @@ export const SelfLearningTable: React.FC<SelfLearningTableProps> = ({ data, onUp
     }
   };
 
+  const saveAsTemplate = () => {
+    if (!selectedTopic) return;
+    
+    const newTemplate = {
+      id: uuidv4(),
+      name: selectedTopic.title || 'New Template',
+      description: 'Saved from my notes',
+      content: selectedTopic.content,
+      customBullets: selectedTopic.customBullets || [],
+      customChecklists: selectedTopic.customChecklists || [],
+      defaultListType: selectedTopic.defaultListType || 'bullet',
+      defaultMarker: selectedTopic.defaultMarker || '•',
+      themeColor: 'emerald',
+      createdAt: new Date().toISOString(),
+      textFontFamily: selectedTopic.textFontFamily,
+      textFontSize: selectedTopic.textFontSize,
+      headerFontFamily: selectedTopic.headerFontFamily,
+      headerFontSize: selectedTopic.headerFontSize
+    };
+    
+    onUpdate((prev: any) => {
+       const currentTemplates = prev.templates || [];
+       return {
+         ...prev,
+         templates: [...currentTemplates, newTemplate]
+       };
+    });
+    
+    showFeedback('Saved to Template Library!');
+  };
+
   const moveTopicToNoteTaking = async (topicToMove: DPSSTopic) => {
     if (topicToMove.isLocked) {
       const userInput = prompt(`This folder/document is LOCKED.\nTo move it, you must type the word "Move" exactly:`);
@@ -4167,10 +4795,8 @@ export const SelfLearningTable: React.FC<SelfLearningTableProps> = ({ data, onUp
           }}
           onClick={() => {
             setSelectedTopicId(topic.id);
+            setIsSidebarOpen(false); // Close sidebar to show writing page
             setOpenMenuId(null);
-            if (window.innerWidth < 768) {
-               setIsSidebarOpen(false);
-            }
             if (hasChildren) {
               setExpandedTopics(prev => ({ ...prev, [topic.id]: !prev[topic.id] }));
             }
@@ -4255,6 +4881,18 @@ export const SelfLearningTable: React.FC<SelfLearningTableProps> = ({ data, onUp
           </div>
 
           <div className="flex gap-1 shrink-0">
+            {isSelected && (
+              <button 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setIsSidebarOpen(false);
+                }}
+                className="p-1.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 shadow-sm transition-all animate-in zoom-in duration-200"
+                title="Write in this document"
+              >
+                <Pencil size={12} strokeWidth={3} />
+              </button>
+            )}
             <div className="relative shrink-0">
               <button 
                 onClick={(e) => { 
@@ -4440,6 +5078,7 @@ export const SelfLearningTable: React.FC<SelfLearningTableProps> = ({ data, onUp
       if (editorRef.current.innerHTML !== content) {
         if (document.activeElement !== editorRef.current) {
           editorRef.current.innerHTML = content;
+          ensureTableSpacers(editorRef.current);
         }
       }
     }
@@ -4538,7 +5177,6 @@ export const SelfLearningTable: React.FC<SelfLearningTableProps> = ({ data, onUp
           onUpdate({ ...data, selfLearningTopics: updatedTopics });
         }
       }
-      setSelectedTopicId(newTopic.id);
       
     } catch(e) {
       console.error(e);
@@ -4611,7 +5249,6 @@ export const SelfLearningTable: React.FC<SelfLearningTableProps> = ({ data, onUp
       } else {
         onUpdate({ ...data, selfLearningTopics: updatedTopics });
       }
-      setSelectedTopicId(newTopic.id);
       
     } catch(e) {
       console.error(e);
@@ -4721,6 +5358,14 @@ export const SelfLearningTable: React.FC<SelfLearningTableProps> = ({ data, onUp
 
   return (
     <div className="flex flex-col md:flex-row h-full w-full p-0 gap-0 overflow-hidden relative">
+      {/* Feedback Notification */}
+      {feedback && (
+        <div className="fixed top-24 right-6 z-[9999] bg-[#121824] text-white py-3 px-5 rounded-2xl shadow-2xl border border-slate-700 font-black text-[10px] uppercase flex items-center gap-2.5 animate-in fade-in slide-in-from-top-4 duration-300">
+          <Check size={14} className="text-emerald-400 stroke-[3]" />
+          {feedback}
+        </div>
+      )}
+
       {/* Sidebar Panel - Mobile Slide-in Overlay */}
       <div 
         style={{ width: isSidebarOpen ? `${sidebarWidth}px` : '0px' }}
@@ -4997,6 +5642,13 @@ export const SelfLearningTable: React.FC<SelfLearningTableProps> = ({ data, onUp
                       placeholder="Topic Title..."
                   />
                   <button
+                    onClick={() => setIsToolbarFloating(!isToolbarFloating)}
+                    className={`p-2.5 shrink-0 pointer-events-auto ${isToolbarFloating ? 'bg-indigo-100/80 text-indigo-600 hover:bg-indigo-200' : 'bg-transparent text-slate-500 hover:bg-white/20'} rounded-xl transition-all shadow-sm hidden md:block`}
+                    title={isToolbarFloating ? "Dock Toolbar" : "Float Toolbar"}
+                  >
+                    <ArrowRightLeft size={16} className="rotate-45" />
+                  </button>
+                  <button
                     onClick={() => setIsToolbarHidden(!isToolbarHidden)}
                     className={`p-2.5 shrink-0 pointer-events-auto ${isToolbarHidden ? 'bg-emerald-100/80 text-emerald-600 hover:bg-emerald-200' : 'bg-transparent text-slate-500 hover:bg-white/20'} rounded-xl transition-all shadow-sm`}
                     title={isToolbarHidden ? "Show Toolbar" : "Full Screen (Hide Toolbar)"}
@@ -5006,7 +5658,83 @@ export const SelfLearningTable: React.FC<SelfLearningTableProps> = ({ data, onUp
                 </div>
                 
                 {!isToolbarHidden && (
-                  <div className="flex flex-col gap-2 p-2 border-b border-black/5 sticky top-0 bg-transparent z-20 rounded-xl overflow-y-auto max-h-[35vh] md:max-h-none flex-shrink-0 scrollbar-thin scrollbar-thumb-slate-300">
+                  <div 
+                    className={`flex flex-col border-black/5 z-[60] rounded-xl flex-shrink-0 scrollbar-thin scrollbar-thumb-slate-300 transition-shadow ${
+                      isToolbarMaximized ? 'gap-6 p-6 md:gap-8 md:p-8' : 'gap-2 p-2'
+                    } ${
+                      isToolbarFloating 
+                        ? isToolbarMaximized
+                          ? 'fixed inset-2 md:inset-8 bg-white/95 backdrop-blur-3xl shadow-[0_20px_60px_-15px_rgba(0,0,0,0.3)] border border-slate-200 overflow-y-auto'
+                          : 'fixed bg-white/95 backdrop-blur-3xl shadow-[0_20px_60px_-15px_rgba(0,0,0,0.3)] border border-slate-200 w-[95vw] sm:w-auto min-w-[320px] max-h-[90vh] resize overflow-auto'
+                        : 'sticky top-0 bg-transparent border-b overflow-visible'
+                    }`}
+                    style={isToolbarFloating && !isToolbarMaximized ? { top: toolbarPos.y, left: toolbarPos.x } : {}}
+                  >
+                    {/* Floating Toolbar Header (for dragging) */}
+                    {isToolbarFloating && (
+                      <div 
+                        className={`flex items-center justify-between px-3 py-2 -mx-2 -mt-2 mb-2 bg-slate-100/90 rounded-t-xl border-b border-slate-200/80 ${isToolbarLocked || isToolbarMaximized ? '' : 'cursor-move hover:bg-slate-200/80 transition-colors'} select-none`}
+                        onPointerDown={(e) => {
+                          if (isToolbarLocked || isToolbarMaximized || (e.target as HTMLElement).closest('button')) return;
+                          e.preventDefault();
+                          const target = e.currentTarget as HTMLElement;
+                          target.setPointerCapture(e.pointerId);
+                          setIsDraggingToolbar(true);
+                          toolbarDragOffset.current = {
+                            x: e.clientX - toolbarPos.x,
+                            y: e.clientY - toolbarPos.y
+                          };
+                        }}
+                        onPointerMove={(e) => {
+                          if (isDraggingToolbar && !isToolbarLocked && !isToolbarMaximized) {
+                             setToolbarPos({
+                               x: e.clientX - toolbarDragOffset.current.x,
+                               y: e.clientY - toolbarDragOffset.current.y
+                             });
+                          }
+                        }}
+                        onPointerUp={(e) => {
+                          setIsDraggingToolbar(false);
+                          const target = e.currentTarget as HTMLElement;
+                          if (target.hasPointerCapture(e.pointerId)) {
+                             target.releasePointerCapture(e.pointerId);
+                          }
+                        }}
+                        onPointerCancel={(e) => {
+                          setIsDraggingToolbar(false);
+                        }}
+                      >
+                        <div className="flex items-center gap-2 pointer-events-none">
+                          {!isToolbarLocked && !isToolbarMaximized && <GripVertical size={16} className="text-slate-400" />}
+                          <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">{isToolbarMaximized ? 'Editor Toolbar' : 'Drag to move toolbar'}</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <button 
+                            onClick={() => setIsToolbarMaximized(!isToolbarMaximized)}
+                            className={`p-1.5 rounded transition-colors ${isToolbarMaximized ? 'bg-emerald-100 text-emerald-600 hover:bg-emerald-200' : 'hover:bg-slate-300/50 text-slate-500'}`}
+                            title={isToolbarMaximized ? "Restore Size" : "Maximize Toolbar"}
+                          >
+                            {isToolbarMaximized ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
+                          </button>
+                          <button 
+                            onClick={() => setIsToolbarLocked(!isToolbarLocked)}
+                            className={`p-1.5 rounded transition-colors ${isToolbarLocked ? 'bg-emerald-100 text-emerald-600 hover:bg-emerald-200' : 'hover:bg-slate-300/50 text-slate-500'}`}
+                            title={isToolbarLocked ? "Unlock Position" : "Lock Position"}
+                            disabled={isToolbarMaximized}
+                          >
+                            {isToolbarLocked ? <Lock size={14} /> : <Unlock size={14} />}
+                          </button>
+                          <button 
+                            onClick={() => setIsToolbarFloating(false)}
+                            className="p-1.5 hover:bg-slate-300/50 rounded text-slate-500 transition-colors"
+                            title="Dock Toolbar"
+                          >
+                            <Minimize2 size={14} />
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                    
                     {/* Row 1: Times New Romans (Font Family), Font Size, Topic Paper Style, Do / Undo / Option */}
                     <div className="flex flex-wrap gap-2 items-center justify-between pb-2 border-b border-white/10">
                       <div className="flex flex-wrap gap-2 items-center">
@@ -5286,6 +6014,46 @@ export const SelfLearningTable: React.FC<SelfLearningTableProps> = ({ data, onUp
                                     <ArrowRight size={12} className="text-orange-500" />
                                     Col Right
                                   </button>
+                                  <button 
+                                    onClick={() => { addColumn('left', true); setShowTableToolsMenu(false); }}
+                                    className="flex items-center gap-1.5 p-1.5 hover:bg-emerald-50 text-slate-700 hover:text-emerald-700 rounded-xl transition-colors font-bold text-xs"
+                                  >
+                                    <CheckSquare size={12} className="text-emerald-500" />
+                                    Smart Col Left
+                                  </button>
+                                  <button 
+                                    onClick={() => { addColumn('right', true); setShowTableToolsMenu(false); }}
+                                    className="flex items-center gap-1.5 p-1.5 hover:bg-emerald-50 text-slate-700 hover:text-emerald-700 rounded-xl transition-colors font-bold text-xs"
+                                  >
+                                    <CheckSquare size={12} className="text-emerald-500" />
+                                    Smart Col Right
+                                  </button>
+                                </div>
+                                <div className="h-px bg-slate-100 my-0.5" />
+                                <div className="grid grid-cols-2 gap-1 col-span-2">
+                                  <button 
+                                    onClick={() => { copyColumn(); setShowTableToolsMenu(false); }}
+                                    className="flex items-center gap-1.5 p-1.5 hover:bg-indigo-50 text-indigo-600 rounded-xl transition-colors font-bold text-xs"
+                                  >
+                                    <Copy size={12} className="text-indigo-500" />
+                                    Copy Col
+                                  </button>
+                                </div>
+                                <div className="grid grid-cols-2 gap-1 col-span-2">
+                                  <button 
+                                    onClick={() => { moveColumn('left'); setShowTableToolsMenu(false); }}
+                                    className="flex items-center gap-1.5 p-1.5 hover:bg-indigo-50 text-indigo-600 rounded-xl transition-colors font-bold text-xs"
+                                  >
+                                    <ArrowLeft size={12} className="text-indigo-500" />
+                                    Move Col
+                                  </button>
+                                  <button 
+                                    onClick={() => { moveColumn('right'); setShowTableToolsMenu(false); }}
+                                    className="flex items-center gap-1.5 p-1.5 hover:bg-indigo-50 text-indigo-600 rounded-xl transition-colors font-bold text-xs"
+                                  >
+                                    <ArrowRight size={12} className="text-indigo-500" />
+                                    Move Col
+                                  </button>
                                 </div>
                                 <div className="h-px bg-slate-100 my-0.5" />
                                 <div className="grid grid-cols-2 gap-1 col-span-2">
@@ -5302,6 +6070,24 @@ export const SelfLearningTable: React.FC<SelfLearningTableProps> = ({ data, onUp
                                   >
                                     <Trash2 size={12} className="text-red-500 rotate-90" />
                                     Del Col
+                                  </button>
+                                </div>
+                                <div className="h-px bg-slate-100 my-0.5" />
+                                <div className="px-2 py-1 text-[10px] font-black text-slate-400 uppercase tracking-wider text-left">Smart-Check Toggle</div>
+                                <div className="flex flex-col gap-1 col-span-2">
+                                  <button 
+                                    onClick={() => { toggleColumnSmartCheck(); setShowTableToolsMenu(false); }}
+                                    className="flex items-center gap-1.5 p-1.5 hover:bg-emerald-50 text-emerald-700 rounded-xl transition-colors font-bold text-xs text-left w-full"
+                                  >
+                                    <CheckSquare size={12} className="text-emerald-500 shrink-0" />
+                                    Smart Check Column
+                                  </button>
+                                  <button 
+                                    onClick={() => { toggleCellSmartCheck(); setShowTableToolsMenu(false); }}
+                                    className="flex items-center gap-1.5 p-1.5 hover:bg-emerald-50 text-emerald-700 rounded-xl transition-colors font-bold text-xs text-left w-full"
+                                  >
+                                    <Check size={12} className="text-emerald-500 shrink-0" />
+                                    Smart Check Cell
                                   </button>
                                 </div>
                               </>
@@ -5509,33 +6295,186 @@ export const SelfLearningTable: React.FC<SelfLearningTableProps> = ({ data, onUp
                                   </div>
                                 </div>
 
-                                {/* Grid Frameworks */}
+                                {/* Resource Library Card */}
                                 <div className="space-y-1.5 bg-slate-50/70 p-2.5 rounded-2xl border border-slate-100">
-                                  <div className="text-[10px] font-extrabold text-indigo-700 flex items-center gap-1.5 tracking-wider select-none">
-                                    <Grid3X3 size={13} className="text-indigo-500" /> Analytical Grids
+                                  <div className="text-[10px] font-extrabold text-cyan-700 flex items-center gap-1.5 tracking-wider select-none">
+                                    <BookOpen size={13} className="text-cyan-500" /> INSERT RESOURCE LIBRARY
                                   </div>
-                                  <div className="flex gap-2 pt-1">
-                                    <button
-                                      type="button"
-                                      onClick={() => { insertThreeColumnGrid('emerald'); setShowMoreMenu(false); }}
-                                      className="flex-1 py-1.5 px-2 bg-white hover:bg-emerald-50 text-emerald-700 border border-slate-200 rounded-xl font-bold text-[10px] tracking-wider uppercase transition-colors"
-                                    >
-                                      3-Col Grid
-                                    </button>
-                                    <button
-                                      type="button"
-                                      onClick={() => { insertFourColumnGrid('blue'); setShowMoreMenu(false); }}
-                                      className="flex-1 py-1.5 px-2 bg-white hover:bg-sky-50 text-sky-700 border border-slate-200 rounded-xl font-bold text-[10px] tracking-wider uppercase transition-colors"
-                                    >
-                                      4-Col Grid
-                                    </button>
+                                  <div className="grid grid-cols-5 gap-1.5 pt-1">
+                                    {[
+                                      { key: 'blue', hex: '#2563eb', bg: '#f0f7ff', border: '#bfdbfe', name: 'Blue' },
+                                      { key: 'emerald', hex: '#059669', bg: '#f0fdf4', border: '#bbf7d0', name: 'Emerald' },
+                                      { key: 'rose', hex: '#dc2626', bg: '#fff1f2', border: '#fecdd3', name: 'Rose' },
+                                      { key: 'amber', hex: '#d97706', bg: '#fffbeb', border: '#fde68a', name: 'Amber' },
+                                      { key: 'violet', hex: '#7c3aed', bg: '#f5f3ff', border: '#ddd6fe', name: 'Violet' },
+                                      { key: 'orange', hex: '#ea580c', bg: '#fff7ed', border: '#fed7aa', name: 'Orange' },
+                                      { key: 'teal', hex: '#0d9488', bg: '#f0fdfa', border: '#99f6e4', name: 'Teal' },
+                                      { key: 'fuchsia', hex: '#c026d3', bg: '#fdf4ff', border: '#f5d0fe', name: 'Fuchsia' },
+                                      { key: 'sky', hex: '#0284c7', bg: '#f0f9ff', border: '#bae6fd', name: 'Sky' },
+                                      { key: 'slate', hex: '#4b5563', bg: '#f8fafc', border: '#cbd5e1', name: 'Slate' }
+                                    ].map((colorObj) => (
+                                      <button
+                                        key={colorObj.key}
+                                        type="button"
+                                        onClick={() => { insertResourceLibrary(colorObj.key); setShowMoreMenu(false); }}
+                                        className="w-8 h-8 rounded-full border flex items-center justify-center hover:scale-115 active:scale-95 transition-all duration-200 shadow-sm cursor-pointer"
+                                        style={{ backgroundColor: colorObj.bg, borderColor: colorObj.border }}
+                                        title={`Insert Resource Library in ${colorObj.name}`}
+                                      >
+                                        <div 
+                                          className="w-3 h-3 rounded-full shadow-sm"
+                                          style={{ backgroundColor: colorObj.hex }}
+                                        />
+                                      </button>
+                                    ))}
                                   </div>
+                                </div>
+
+                                {/* Task Matrix Card */}
+                                <div className="space-y-1.5 bg-slate-50/70 p-2.5 rounded-2xl border border-slate-100">
+                                  <div className="text-[10px] font-extrabold text-rose-700 flex items-center gap-1.5 tracking-wider select-none">
+                                    <Activity size={13} className="text-rose-500" /> INSERT TASK MATRIX TABLE
+                                  </div>
+                                  <div className="grid grid-cols-5 gap-1.5 pt-1">
+                                    {[
+                                      { key: 'rose', hex: '#dc2626', bg: '#fff1f2', border: '#fecdd3', name: 'Rose' },
+                                      { key: 'blue', hex: '#2563eb', bg: '#f0f7ff', border: '#bfdbfe', name: 'Blue' },
+                                      { key: 'emerald', hex: '#059669', bg: '#f0fdf4', border: '#bbf7d0', name: 'Emerald' },
+                                      { key: 'amber', hex: '#d97706', bg: '#fffbeb', border: '#fde68a', name: 'Amber' },
+                                      { key: 'violet', hex: '#7c3aed', bg: '#f5f3ff', border: '#ddd6fe', name: 'Violet' },
+                                      { key: 'orange', hex: '#ea580c', bg: '#fff7ed', border: '#fed7aa', name: 'Orange' },
+                                      { key: 'teal', hex: '#0d9488', bg: '#f0fdfa', border: '#99f6e4', name: 'Teal' },
+                                      { key: 'fuchsia', hex: '#c026d3', bg: '#fdf4ff', border: '#f5d0fe', name: 'Fuchsia' },
+                                      { key: 'sky', hex: '#0284c7', bg: '#f0f9ff', border: '#bae6fd', name: 'Sky' },
+                                      { key: 'slate', hex: '#4b5563', bg: '#f8fafc', border: '#cbd5e1', name: 'Slate' }
+                                    ].map((colorObj) => (
+                                      <button
+                                        key={colorObj.key}
+                                        type="button"
+                                        onClick={() => { insertTaskMatrix(colorObj.key); setShowMoreMenu(false); }}
+                                        className="w-8 h-8 rounded-full border flex items-center justify-center hover:scale-115 active:scale-95 transition-all duration-200 shadow-sm cursor-pointer"
+                                        style={{ backgroundColor: colorObj.bg, borderColor: colorObj.border }}
+                                        title={`Insert Task Matrix in ${colorObj.name}`}
+                                      >
+                                        <div 
+                                          className="w-3 h-3 rounded-full shadow-sm"
+                                          style={{ backgroundColor: colorObj.hex }}
+                                        />
+                                      </button>
+                                    ))}
+                                  </div>
+                                </div>
+
+                                {/* 3-Column Tri-Matrix */}
+                                <div className="space-y-1.5 bg-slate-50/70 p-2.5 rounded-2xl border border-slate-100">
+                                  <div className="text-[10px] font-extrabold text-blue-700 flex items-center gap-1.5 tracking-wider select-none">
+                                    <Scale size={13} className="text-blue-500" /> INSERT 3-COLUMN TRI-MATRIX
+                                  </div>
+                                  <div className="grid grid-cols-5 gap-1.5 pt-1">
+                                    {[
+                                      { key: 'blue', hex: '#2563eb', bg: '#f0f7ff', border: '#bfdbfe', name: 'Blue' },
+                                      { key: 'emerald', hex: '#059669', bg: '#f0fdf4', border: '#bbf7d0', name: 'Emerald' },
+                                      { key: 'rose', hex: '#dc2626', bg: '#fff1f2', border: '#fecdd3', name: 'Rose' },
+                                      { key: 'amber', hex: '#d97706', bg: '#fffbeb', border: '#fde68a', name: 'Amber' },
+                                      { key: 'violet', hex: '#7c3aed', bg: '#f5f3ff', border: '#ddd6fe', name: 'Violet' },
+                                      { key: 'orange', hex: '#ea580c', bg: '#fff7ed', border: '#fed7aa', name: 'Orange' },
+                                      { key: 'teal', hex: '#0d9488', bg: '#f0fdfa', border: '#99f6e4', name: 'Teal' },
+                                      { key: 'fuchsia', hex: '#c026d3', bg: '#fdf4ff', border: '#f5d0fe', name: 'Fuchsia' },
+                                      { key: 'sky', hex: '#0284c7', bg: '#f0f9ff', border: '#bae6fd', name: 'Sky' },
+                                      { key: 'slate', hex: '#4b5563', bg: '#f8fafc', border: '#cbd5e1', name: 'Slate' }
+                                    ].map((colorObj) => (
+                                      <button
+                                        key={colorObj.key}
+                                        type="button"
+                                        onClick={() => { insertThreeColumnGrid(colorObj.key); setShowMoreMenu(false); }}
+                                        className="w-8 h-8 rounded-full border flex items-center justify-center hover:scale-115 active:scale-95 transition-all duration-200 shadow-sm cursor-pointer"
+                                        style={{ backgroundColor: colorObj.bg, borderColor: colorObj.border }}
+                                        title={`Insert Tri-Matrix in ${colorObj.name}`}
+                                      >
+                                        <div 
+                                          className="w-3 h-3 rounded-full shadow-sm"
+                                          style={{ backgroundColor: colorObj.hex }}
+                                        />
+                                      </button>
+                                    ))}
+                                  </div>
+                                </div>
+
+                                {/* 4-Column Quad-Matrix */}
+                                <div className="space-y-1.5 bg-slate-50/70 p-2.5 rounded-2xl border border-slate-100">
+                                  <div className="text-[10px] font-extrabold text-orange-700 flex items-center gap-1.5 tracking-wider select-none">
+                                    <Scale size={13} className="text-orange-500" /> INSERT 4-COLUMN QUAD-MATRIX
+                                  </div>
+                                  <div className="grid grid-cols-5 gap-1.5 pt-1">
+                                    {[
+                                      { key: 'blue', hex: '#2563eb', bg: '#f0f7ff', border: '#bfdbfe', name: 'Blue' },
+                                      { key: 'emerald', hex: '#059669', bg: '#f0fdf4', border: '#bbf7d0', name: 'Emerald' },
+                                      { key: 'rose', hex: '#dc2626', bg: '#fff1f2', border: '#fecdd3', name: 'Rose' },
+                                      { key: 'amber', hex: '#d97706', bg: '#fffbeb', border: '#fde68a', name: 'Amber' },
+                                      { key: 'violet', hex: '#7c3aed', bg: '#f5f3ff', border: '#ddd6fe', name: 'Violet' },
+                                      { key: 'orange', hex: '#ea580c', bg: '#fff7ed', border: '#fed7aa', name: 'Orange' },
+                                      { key: 'teal', hex: '#0d9488', bg: '#f0fdfa', border: '#99f6e4', name: 'Teal' },
+                                      { key: 'fuchsia', hex: '#c026d3', bg: '#fdf4ff', border: '#f5d0fe', name: 'Fuchsia' },
+                                      { key: 'sky', hex: '#0284c7', bg: '#f0f9ff', border: '#bae6fd', name: 'Sky' },
+                                      { key: 'slate', hex: '#4b5563', bg: '#f8fafc', border: '#cbd5e1', name: 'Slate' }
+                                    ].map((colorObj) => (
+                                      <button
+                                        key={colorObj.key}
+                                        type="button"
+                                        onClick={() => { insertFourColumnGrid(colorObj.key); setShowMoreMenu(false); }}
+                                        className="w-8 h-8 rounded-full border flex items-center justify-center hover:scale-115 active:scale-95 transition-all duration-200 shadow-sm cursor-pointer"
+                                        style={{ backgroundColor: colorObj.bg, borderColor: colorObj.border }}
+                                        title={`Insert Quad-Matrix in ${colorObj.name}`}
+                                      >
+                                        <div 
+                                          className="w-3 h-3 rounded-full shadow-sm"
+                                          style={{ backgroundColor: colorObj.hex }}
+                                        />
+                                      </button>
+                                    ))}
+                                  </div>
+                                </div>
+
+                                {/* Smart Check Tool */}
+                                <div className="space-y-1.5 bg-slate-50/70 p-2.5 rounded-2xl border border-slate-100 mt-2">
+                                  <button
+                                    type="button"
+                                    onClick={() => { insertSmartCheckMatrix(); setShowMoreMenu(false); }}
+                                    className="w-full py-2 px-3 bg-emerald-500 hover:bg-emerald-600 text-white border border-emerald-400 rounded-xl font-bold text-[10px] tracking-wider uppercase transition-colors flex items-center justify-center gap-1.5"
+                                  >
+                                    <CheckSquare size={13} /> Insert Smart Check Matrix
+                                  </button>
+                                </div>
+                                <div className="flex gap-2 pt-1">
+                                  <button
+                                    type="button"
+                                    onClick={() => { insertTaskMatrix('blue'); setShowMoreMenu(false); }}
+                                    className="flex-1 py-1.5 px-2 bg-blue-500 hover:bg-blue-600 text-white border border-blue-400 rounded-xl font-bold text-[10px] tracking-wider uppercase transition-colors flex items-center justify-center gap-1"
+                                  >
+                                    <Activity size={12} /> Matrix
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => { insertResearchLibrary('indigo'); setShowMoreMenu(false); }}
+                                    className="flex-1 py-1.5 px-2 bg-indigo-500 hover:bg-indigo-600 text-white border border-indigo-400 rounded-xl font-bold text-[10px] tracking-wider uppercase transition-colors flex items-center justify-center gap-1"
+                                  >
+                                    <BookOpen size={12} /> Research
+                                  </button>
                                 </div>
                               </div>
                             </div>
                           </>
                         )}
                       </div>
+
+                      {/* Template Save */}
+                      <button 
+                        onClick={saveAsTemplate}
+                        className="flex items-center gap-2 px-3 py-1.5 bg-indigo-600 text-white rounded-lg text-xs font-bold hover:bg-indigo-700 shadow-sm transition-colors"
+                        title="Save this document as a reusable template"
+                      >
+                        <Bookmark size={14} /> Save Template
+                      </button>
 
                       {/* Date */}
                       <button onClick={insertDate} className="flex items-center gap-2 px-3 py-1.5 bg-emerald-500 text-white rounded-lg text-xs font-bold hover:bg-emerald-600 shadow-sm transition-colors" title="Insert Date at Cursor">
@@ -6383,8 +7322,8 @@ export const SelfLearningTable: React.FC<SelfLearningTableProps> = ({ data, onUp
                 })()}
 
                 {/* Relative Wrapper for Editor + Ruler Guides */}
-                <div className="relative flex flex-col w-full flex-1 min-h-0 overflow-y-auto editor-scrollbar" dir="rtl">
-                  <div dir="ltr" className="flex flex-col flex-1 w-full relative">
+                  <div className="relative flex flex-col w-full flex-1 min-h-0 overflow-y-auto overflow-x-auto editor-scrollbar" dir="rtl">
+                    <div dir="ltr" className="flex flex-col flex-1 min-w-full relative">
                   
                   {/* Modern Word-style Horizontal Page Ruler */}
                   {showRuler && (
@@ -6442,12 +7381,13 @@ export const SelfLearningTable: React.FC<SelfLearningTableProps> = ({ data, onUp
                       onBlur={(e) => {
                         updateTopic(selectedTopic.id, { content: e.currentTarget.innerHTML });
                       }}
+                      className={`editor-content w-full flex-1 outline-none leading-relaxed font-medium transition-all focus:ring-4 focus:ring-emerald-500/10 bg-transparent`}
                       style={{ 
                         minHeight: '300px',
                         fontSize: `${selectedTopic?.textFontSize || textFontSize}px`,
-                        fontFamily: selectedTopic?.textFontFamily || textFontFamily
+                        fontFamily: selectedTopic?.textFontFamily || textFontFamily,
+                        padding: '0.2in 0.2in 0.3in 0.2in'
                       }}
-                      className={`editor-content w-full flex-1 outline-none p-4 md:p-8 leading-relaxed font-medium transition-all focus:ring-4 focus:ring-emerald-500/10 bg-transparent`}
                   ></div>
                   </div>
                 </div>

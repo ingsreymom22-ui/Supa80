@@ -4,9 +4,15 @@ const STORE_NAME = 'keyval';
 
 function getDB(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
-    const request = indexedDB.open(DB_NAME, 1);
-    request.onupgradeneeded = () => {
-      request.result.createObjectStore(STORE_NAME);
+    const request = indexedDB.open(DB_NAME, 2); // Bumped version to 2
+    request.onupgradeneeded = (e) => {
+      const db = request.result;
+      if (!db.objectStoreNames.contains(STORE_NAME)) {
+        db.createObjectStore(STORE_NAME);
+      }
+      if (!db.objectStoreNames.contains('pending_sync')) {
+        db.createObjectStore('pending_sync', { keyPath: 'id', autoIncrement: true });
+      }
     };
     request.onsuccess = () => resolve(request.result);
     request.onerror = () => reject(request.error);
@@ -72,6 +78,49 @@ export const storage = {
       localStorage.removeItem(key);
     } catch (e) {
       // ignore
+    }
+  },
+
+  async queueSync(userId: string, data: any): Promise<void> {
+    try {
+      const db = await getDB();
+      const transaction = db.transaction('pending_sync', 'readwrite');
+      const store = transaction.objectStore('pending_sync');
+      await new Promise<void>((resolve, reject) => {
+        const req = store.add({ userId, data, timestamp: Date.now() });
+        req.onsuccess = () => resolve();
+        req.onerror = () => reject(req.error);
+      });
+    } catch (e) {
+      console.error("Queue sync failed", e);
+    }
+  },
+
+  async getSyncQueue(): Promise<any[]> {
+    try {
+      const db = await getDB();
+      return new Promise((resolve, reject) => {
+        const transaction = db.transaction('pending_sync', 'readonly');
+        const store = transaction.objectStore('pending_sync');
+        const req = store.getAll();
+        req.onsuccess = () => resolve(req.result || []);
+        req.onerror = () => reject(req.error);
+      });
+    } catch (e) {
+      return [];
+    }
+  },
+
+  async clearSyncQueue(ids: number[]): Promise<void> {
+    try {
+      const db = await getDB();
+      const transaction = db.transaction('pending_sync', 'readwrite');
+      const store = transaction.objectStore('pending_sync');
+      for (const id of ids) {
+        store.delete(id);
+      }
+    } catch (e) {
+      console.error("Clear sync queue failed", e);
     }
   }
 };

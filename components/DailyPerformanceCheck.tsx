@@ -1023,11 +1023,12 @@ export const DailyPerformanceCheck: React.FC<DailyPerformanceCheckProps> = ({
         <div ref={dpcRef} className="space-y-4 animate-in fade-in duration-150">
           <div className="md:bg-white md:rounded-3xl md:border md:border-stone-200 md:shadow-sm md:overflow-hidden">
             {/* Desktop Checklist Table: Generously spaced & larger for PC view */}
-            <div className="hidden md:block overflow-x-auto">
-              <table className="w-full border-collapse min-w-[850px]">
+            <div className="hidden md:block overflow-x-auto mobile-a4-wrapper">
+              <div className="a4-container shadow-none min-h-full">
+                <table className="w-full border-collapse">
                 <thead>
                   <tr className="border-b border-stone-200 bg-stone-50/50">
-                    <th className="py-4 px-6 text-left text-[11px] md:text-xs font-black text-stone-500 uppercase tracking-widest w-[40%]">
+                    <th className="py-4 px-6 text-left text-[11px] md:text-xs font-black text-stone-500 uppercase tracking-widest min-w-[200px]">
                       Task Name & Urgency
                     </th>
                     {daysOfWeek.map((day) => {
@@ -1167,6 +1168,7 @@ export const DailyPerformanceCheck: React.FC<DailyPerformanceCheckProps> = ({
                   )}
                 </tbody>
               </table>
+            </div>
             </div>
 
             {/* Mobile checklist grid: premium, spaced card-like list */}

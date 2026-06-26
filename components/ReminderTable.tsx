@@ -20,6 +20,7 @@ import {
   Archive,
   RotateCcw,
   X,
+  AlertTriangle,
   ChevronUp,
   ChevronDown
 } from 'lucide-react';
@@ -37,7 +38,28 @@ const MultilineInput: React.FC<{
   placeholder?: string;
 }> = ({ value, onChange, className, style, placeholder }) => {
   return (
-    <div onKeyDown={(e) => {
+    <div 
+      onClick={(e) => {
+        const target = e.target as HTMLElement;
+        if (target.classList.contains('smart-check-cell')) {
+          e.preventDefault();
+          const states = ['✅', '❌', '⏳', '⬜'];
+          const colors = ['#10b981', '#ef4444', '#f59e0b', '#64748b'];
+          const currentText = target.innerText.trim();
+          const currentIndex = states.indexOf(currentText);
+          const nextIndex = (currentIndex + 1) % states.length;
+          target.innerText = states[nextIndex];
+          target.style.color = colors[nextIndex];
+          
+          const editor = target.closest('[contenteditable="true"]') as HTMLElement;
+          if (editor) {
+            // Trigger onChange by dispatching input event
+            const event = new Event('input', { bubbles: true });
+            editor.dispatchEvent(event);
+          }
+        }
+      }}
+      onKeyDown={(e) => {
         if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault();
             (e.target as HTMLElement).blur();
@@ -82,6 +104,59 @@ const ReminderTable: React.FC<ReminderTableProps> = ({
   const [viewMode, setViewMode] = useState<'All' | 'Active' | 'Completed' | 'Archived'>('All');
   const [showHistory, setShowHistory] = useState(false);
   const [draggedIdx, setDraggedIdx] = useState<number | null>(null);
+  const [layoutMode, setLayoutMode] = useState<'Table' | 'Board'>('Board');
+  const [sortBy, setSortBy] = useState<'Manual' | 'Deadline'>('Manual');
+
+  const parseStoredDate = (str: string): Date | null => {
+    if (!str) return null;
+    str = str.trim();
+    const parsedWord = Date.parse(str);
+    if (!isNaN(parsedWord)) return new Date(parsedWord);
+    if (str.includes('/')) {
+      const parts = str.split('/');
+      if (parts.length === 3) {
+        const d = Number(parts[0]);
+        const m = Number(parts[1]) - 1;
+        let y = Number(parts[2]);
+        if (y < 100) y += 2000;
+        const date = new Date(y, m, d);
+        if (!isNaN(date.getTime())) return date;
+      }
+    }
+    if (str.includes('-')) {
+      const parts = str.split('-');
+      if (parts.length === 3) {
+        const y = Number(parts[0]);
+        const m = Number(parts[1]) - 1;
+        const d = Number(parts[2]);
+        const date = new Date(y, m, d);
+        if (!isNaN(date.getTime())) return date;
+      }
+    }
+    return null;
+  };
+
+  const getUrgencyInfo = (deadlineStr: string) => {
+    if (!deadlineStr) return null;
+    const parsed = parseStoredDate(deadlineStr);
+    if (!parsed) return null;
+    
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const deadline = new Date(parsed);
+    deadline.setHours(0, 0, 0, 0);
+    
+    const diffTime = deadline.getTime() - today.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    
+    return {
+      days: diffDays,
+      isOverdue: diffDays < 0,
+      isToday: diffDays === 0,
+      isTomorrow: diffDays === 1,
+      isSoon: diffDays > 1 && diffDays <= 3
+    };
+  };
 
   const filteredReminders = students
     .filter(s => s.category === 'Reminder' && !s.deletedAt)
@@ -101,50 +176,24 @@ const ReminderTable: React.FC<ReminderTableProps> = ({
     .filter(s => !!s.isArchived);
 
   // View state dispatcher
-  let displayedReminders = [];
+  let baseList = [];
   if (viewMode === 'Archived') {
-    displayedReminders = archivedReminders;
+    baseList = archivedReminders;
   } else if (viewMode === 'Active') {
-    displayedReminders = activeReminders.filter(s => s.status !== 'Completed');
+    baseList = activeReminders.filter(s => s.status !== 'Completed');
   } else if (viewMode === 'Completed') {
-    displayedReminders = activeReminders.filter(s => s.status === 'Completed');
+    baseList = activeReminders.filter(s => s.status === 'Completed');
   } else {
-    displayedReminders = activeReminders;
+    baseList = activeReminders;
   }
 
-  const parseStoredDate = (str: string): Date | null => {
-    if (!str) return null;
-    str = str.trim();
-    // Case 1: already MMMM d, yyyy (e.g., July 26, 2026)
-    const parsedWord = Date.parse(str);
-    if (!isNaN(parsedWord)) {
-      return new Date(parsedWord);
-    }
-    // Case 2: dd/MM/yy
-    if (str.includes('/')) {
-      const parts = str.split('/');
-      if (parts.length === 3) {
-        const d = Number(parts[0]);
-        const m = Number(parts[1]) - 1;
-        let y = Number(parts[2]);
-        if (y < 100) y += 2000;
-        const date = new Date(y, m, d);
-        if (!isNaN(date.getTime())) return date;
-      }
-    }
-    // Case 3: yyyy-mm-dd
-    if (str.includes('-')) {
-      const parts = str.split('-');
-      if (parts.length === 3) {
-        const y = Number(parts[0]);
-        const m = Number(parts[1]) - 1;
-        const d = Number(parts[2]);
-        const date = new Date(y, m, d);
-        if (!isNaN(date.getTime())) return date;
-      }
-    }
-    return null;
-  };
+  const displayedReminders = sortBy === 'Deadline' 
+    ? [...baseList].sort((a, b) => {
+        const dateA = a.deadline ? parseStoredDate(a.deadline)?.getTime() || Infinity : Infinity;
+        const dateB = b.deadline ? parseStoredDate(b.deadline)?.getTime() || Infinity : Infinity;
+        return dateA - dateB;
+      })
+    : baseList;
 
   const isoToDisplay = (iso: string) => {
       if (!iso) return '';
@@ -278,6 +327,32 @@ const ReminderTable: React.FC<ReminderTableProps> = ({
         <div className="overflow-x-auto w-full lg:w-auto pb-2 lg:pb-0 flex items-center lg:justify-end custom-scrollbar relative z-50">
           <div className="flex items-center gap-3 shrink-0 min-w-max pr-4">
             <div className="flex bg-white/50 border border-slate-100 rounded-xl p-1 relative z-50">
+              {(['Manual', 'Deadline'] as const).map(mode => (
+                <button 
+                  key={mode}
+                  onClick={() => setSortBy(mode)}
+                  className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${sortBy === mode ? 'bg-orange-500 text-white shadow-lg shadow-orange-500/20' : 'text-stone-500 hover:text-stone-850'}`}
+                >
+                  {mode === 'Manual' ? <GripVertical size={14} className="inline mr-1" /> : <Calendar size={14} className="inline mr-1" />}
+                  {mode}
+                </button>
+              ))}
+            </div>
+
+            <div className="flex bg-white/50 border border-slate-100 rounded-xl p-1 relative z-50">
+              {(['Table', 'Board'] as const).map(mode => (
+                <button 
+                  key={mode}
+                  onClick={() => setLayoutMode(mode)}
+                  className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${layoutMode === mode ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/20' : 'text-stone-500 hover:text-stone-850'}`}
+                >
+                  {mode === 'Table' ? <LayoutGrid size={14} className="inline mr-1" /> : <Palette size={14} className="inline mr-1" />}
+                  {mode}
+                </button>
+              ))}
+            </div>
+
+            <div className="flex bg-white/50 border border-slate-100 rounded-xl p-1 relative z-50">
               {(['All', 'Active', 'Completed', 'Archived'] as const).map(mode => (
                 <button 
                   key={mode}
@@ -345,290 +420,358 @@ const ReminderTable: React.FC<ReminderTableProps> = ({
       </div>
 
       <div className="flex-1 bg-white/[0.01] backdrop-blur-3xl rounded-[40px] shadow-2xl border border-white/10 overflow-hidden flex flex-col">
-        <div className="overflow-auto flex-1 custom-scrollbar">
-          {/* Desktop Table View */}
-          <table className="hidden md:table w-full border-collapse table-fixed min-w-[900px]">
-            <thead className="sticky top-0 z-40 bg-white/10 backdrop-blur-xl">
-              <tr className="border-b border-white/20">
-                <th className="w-16 h-14 text-[10px] font-black text-slate-900 uppercase tracking-widest">#</th>
-                <th className="w-[45%] text-left px-4 text-[10px] font-black text-slate-900 uppercase tracking-widest pt-5">
-                  Task / Item
-                </th>
-                <th className="w-40 text-center text-[10px] font-black text-slate-900 uppercase tracking-widest">Deadline</th>
-                <th className="w-32 text-center text-[10px] font-black text-slate-900 uppercase tracking-widest">Priority</th>
-                <th className="w-32 text-center text-[10px] font-black text-slate-900 uppercase tracking-widest">Recurring</th>
-                <th className="w-36 text-center text-[10px] font-black text-slate-900 uppercase tracking-widest">Status</th>
-                <th className="w-16 text-center text-[10px] font-black text-slate-400 uppercase tracking-widest">Del</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-white/10 font-sans">
-              {displayedReminders
-                .filter(s => filters.showHidden || !s.isHidden)
-                .map((s, idx) => (
-                <tr 
-                  key={s.id} 
-                  className={`group hover:bg-white/30 transition-all ${getRowBg(idx)} ${s.isHidden ? 'opacity-50' : ''} ${draggedIdx === idx ? 'opacity-40 border-2 border-dashed border-orange-400 bg-orange-50/10' : ''}`}
-                  onDragOver={(e) => {
-                    e.preventDefault();
-                  }}
-                  onDrop={(e) => {
-                    e.preventDefault();
-                    if (draggedIdx !== null && draggedIdx !== idx) {
-                      moveReminder(draggedIdx, idx);
-                    }
-                  }}
-                >
-                  <td className="text-center p-2 text-[10px] font-bold text-slate-400 select-none">
-                    <div className="flex items-center justify-center gap-1">
-                      <div 
-                        draggable
-                        onDragStart={(e) => {
-                          setDraggedIdx(idx);
-                        }}
-                        onDragEnd={() => {
-                          setDraggedIdx(null);
-                        }}
-                        className="cursor-grab active:cursor-grabbing text-slate-300 hover:text-slate-500 p-1 shrink-0"
-                        title="Drag to reorder"
-                      >
-                        <GripVertical size={14} />
-                      </div>
-                      <div className="flex flex-col shrink-0">
-                        <button 
-                          onClick={() => moveReminder(idx, idx - 1)}
-                          disabled={idx === 0}
-                          className="text-slate-300 hover:text-slate-500 disabled:opacity-30 disabled:pointer-events-none p-0.5"
-                          title="Move Up"
-                        >
-                          <ChevronUp size={12} />
-                        </button>
-                        <button 
-                          onClick={() => moveReminder(idx, idx + 1)}
-                          disabled={idx === activeReminders.length - 1}
-                          className="text-slate-300 hover:text-slate-500 disabled:opacity-30 disabled:pointer-events-none p-0.5"
-                          title="Move Down"
-                        >
-                          <ChevronDown size={12} />
-                        </button>
-                      </div>
-                      <span className="ml-1 w-4 text-left">{idx + 1}</span>
-                    </div>
-                  </td>
-                  <td className="px-4 py-3 group/cell">
-                    <div className="flex items-center justify-between gap-2">
-                      <MultilineInput 
-                        value={s.name || ''} 
-                        onChange={val => updateField(s.id, 'name', val)}
-                        placeholder="Enter task name..."
-                        style={{ 
-                          fontFamily: settings?.fontFamily || "Inter, sans-serif",
-                          fontSize: `${Math.max(14, settings?.fontSize || 15)}px`
-                        }}
-                        className="flex-1 bg-transparent font-black text-slate-900 outline-none placeholder:text-slate-500"
-                      />
-                    </div>
-                  </td>
-                  <td className="px-4">
-                    <div className="relative flex items-center justify-center gap-1.5 px-3 py-1.5 bg-white/40 rounded-xl border border-slate-100 hover:border-orange-300 transition-all select-none cursor-pointer">
-                        <Calendar size={12} className="text-orange-500 shrink-0" />
-                        <span className="text-[11px] font-black text-slate-700 capitalize shrink-0">
-                          {s.deadline ? formatShortDate(s.deadline) : 'No Date'}
-                        </span>
-                        <input 
-                          type="date"
-                          value={displayToIso(s.deadline || '')} 
-                          onChange={e => updateField(s.id, 'deadline', isoToDisplay(e.target.value))}
-                          className="absolute inset-0 opacity-0 cursor-pointer w-full h-full z-10"
-                        />
-                    </div>
-                  </td>
-                  <td className="px-2 text-center">
-                    <div className="flex items-center justify-center">
-                      <select
-                        value={s.priority || 'Medium'}
-                        onChange={e => updateField(s.id, 'priority', e.target.value)}
-                        className={`text-[10px] font-black uppercase tracking-widest outline-none bg-white/50 border border-slate-100 rounded-lg py-1 px-1.5 text-center cursor-pointer transition-colors ${
-                          s.priority === 'High' ? 'text-red-500 border-red-100 bg-red-50/10' :
-                          s.priority === 'Low' ? 'text-slate-405 border-slate-200 bg-slate-50/10' :
-                          'text-amber-500 border-amber-100 bg-amber-50/10'
-                        }`}
-                      >
-                        <option value="High">🔴 HIGH</option>
-                        <option value="Medium">🟡 MED</option>
-                        <option value="Low">⚪ LOW</option>
-                      </select>
-                    </div>
-                  </td>
-                  <td className="px-2 text-center">
-                    <div className="flex items-center justify-center">
-                      <select
-                        value={s.recurring || 'None'}
-                        onChange={e => updateField(s.id, 'recurring', e.target.value)}
-                        className="text-[10px] font-black uppercase tracking-widest text-orange-500 outline-none bg-white/50 border border-orange-100 rounded-lg py-1 px-1.5 text-center cursor-pointer transition-colors"
-                      >
-                        <option value="None">↻ ONCE</option>
-                        <option value="Daily">↻ DAILY</option>
-                        <option value="Weekly">↻ WEEKLY</option>
-                        <option value="Monthly">↻ MONTHLY</option>
-                      </select>
-                    </div>
-                  </td>
-                  <td className="px-4 text-center">
-                    <select 
-                      value={s.status || 'Pending'} 
-                      onChange={e => handleStatusChange(s, e.target.value)}
-                      style={{ 
-                        fontFamily: settings?.fontFamily || "Inter, sans-serif",
-                        fontSize: `${settings?.fontSize || 10}px`
-                      }}
-                      className={`bg-transparent font-black outline-none appearance-none cursor-pointer ${getStatusColor(s.status)}`}
-                    >
-                      <option value="Pending">Pending</option>
-                      <option value="In Progress">In Progress</option>
-                      <option value="Completed">Completed</option>
-                      <option value="Urgent">Urgent</option>
-                    </select>
-                  </td>
-                  <td className="text-center px-4">
-                    <div className="flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button 
-                        onClick={() => updateField(s.id, 'isHidden', !s.isHidden)}
-                        className={`p-1.5 rounded-lg transition-all ${s.isHidden ? 'text-orange-600' : 'text-stone-400 hover:text-orange-600'}`}
-                        title={s.isHidden ? "Unhide" : "Hide"}
-                      >
-                        {s.isHidden ? <Eye size={14} /> : <EyeOff size={14} />}
-                      </button>
-                      <button 
-                        onClick={() => onDeleteStudent(s.id)}
-                        className="p-1.5 text-slate-300 hover:text-orange-500 transition-colors"
-                        title="Delete"
-                      >
-                        <Trash2 size={14} />
-                      </button>
-                    </div>
-                  </td>
+        <div className="overflow-auto flex-1 custom-scrollbar overflow-x-auto mobile-a4-wrapper" style={{ padding: '0.2in 0.2in 0.3in 0.2in' }}>
+          {/* Main View Area */}
+          {layoutMode === 'Table' ? (
+            <div className="a4-container shadow-none min-h-full">
+              <table className="w-full border-collapse table-auto">
+                <thead className="sticky top-0 z-40 bg-white/10 backdrop-blur-xl">
+                <tr className="border-b border-white/20">
+                  <th className="px-2 h-14 text-[10px] font-black text-slate-900 uppercase tracking-widest w-12">#</th>
+                  <th className="text-left px-4 text-[10px] font-black text-slate-900 uppercase tracking-widest pt-5 min-w-[220px]">
+                    Task / Item
+                  </th>
+                  <th className="px-4 text-center text-[10px] font-black text-slate-900 uppercase tracking-widest min-w-[120px] w-32">Deadline</th>
+                  <th className="px-4 text-center text-[10px] font-black text-slate-900 uppercase tracking-widest min-w-[100px] w-28">Priority</th>
+                  <th className="px-4 text-center text-[10px] font-black text-slate-900 uppercase tracking-widest min-w-[100px] w-28">Recurring</th>
+                  <th className="px-4 text-center text-[10px] font-black text-slate-900 uppercase tracking-widest min-w-[120px] w-32">Status</th>
+                  <th className="w-16 text-center text-[10px] font-black text-slate-400 uppercase tracking-widest">Del</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-
-          {/* Mobile Card Stack View */}
-          <div className="md:hidden flex flex-col gap-4 p-4">
-            {displayedReminders
-              .filter(s => filters.showHidden || !s.isHidden)
-              .map((s, idx) => (
-                <div 
-                  key={s.id} 
-                  className={`relative p-5 rounded-3xl border border-white/20 shadow-lg ${getRowBg(idx)} ${s.isHidden ? 'opacity-50' : ''}`}
-                >
-                  <div className="flex items-start justify-between mb-4">
-                    <div className="flex items-center gap-2">
-                      <span className="w-8 h-8 bg-white/40 rounded-full flex items-center justify-center text-[10px] font-black text-slate-600">
-                        {idx + 1}
-                      </span>
-                      <div className="flex gap-1">
-                        <button 
-                          onClick={() => moveReminder(idx, idx - 1)}
-                          disabled={idx === 0}
-                          className="p-1.5 bg-white/40 rounded-lg text-slate-400 disabled:opacity-20"
-                        >
-                          <ChevronUp size={14} />
-                        </button>
-                        <button 
-                          onClick={() => moveReminder(idx, idx + 1)}
-                          disabled={idx === activeReminders.length - 1}
-                          className="p-1.5 bg-white/40 rounded-lg text-slate-400 disabled:opacity-20"
-                        >
-                          <ChevronDown size={14} />
-                        </button>
-                      </div>
-                    </div>
-                    <button 
-                      onClick={() => onDeleteStudent(s.id)}
-                      className="p-2 text-rose-400 bg-white/40 rounded-xl"
-                    >
-                      <Trash2 size={16} />
-                    </button>
-                  </div>
-
-                  <div className="space-y-4">
-                    <MultilineInput 
-                      value={s.name || ''} 
-                      onChange={val => updateField(s.id, 'name', val)}
-                      placeholder="Enter task name..."
-                      style={{ 
-                        fontFamily: settings?.fontFamily || "Inter, sans-serif",
-                        fontSize: '16px'
-                      }}
-                      className="w-full bg-transparent font-black text-slate-900 outline-none text-lg"
-                    />
-
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="space-y-1">
-                        <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Deadline</label>
-                        <div className="relative flex items-center gap-2 p-3 bg-white/40 rounded-2xl border border-white/20">
-                          <Calendar size={14} className="text-orange-500" />
-                          <span className="text-xs font-black text-slate-700">
-                            {s.deadline ? formatShortDate(s.deadline) : 'No Date'}
-                          </span>
-                          <input 
-                            type="date"
-                            value={displayToIso(s.deadline || '')} 
-                            onChange={e => updateField(s.id, 'deadline', isoToDisplay(e.target.value))}
-                            className="absolute inset-0 opacity-0"
-                          />
-                        </div>
-                      </div>
-
-                      <div className="space-y-1">
-                        <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Priority</label>
-                        <select
-                          value={s.priority || 'Medium'}
-                          onChange={e => updateField(s.id, 'priority', e.target.value)}
-                          className={`w-full p-3 rounded-2xl text-xs font-black uppercase border border-white/20 ${
-                            s.priority === 'High' ? 'text-red-500 bg-red-50/20' :
-                            s.priority === 'Low' ? 'text-slate-500 bg-slate-50/20' :
-                            'text-amber-500 bg-amber-50/20'
-                          }`}
-                        >
-                          <option value="High">🔴 HIGH</option>
-                          <option value="Medium">🟡 MED</option>
-                          <option value="Low">⚪ LOW</option>
-                        </select>
-                      </div>
-
-                      <div className="space-y-1">
-                        <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Recurring</label>
-                        <select
-                          value={s.recurring || 'None'}
-                          onChange={e => updateField(s.id, 'recurring', e.target.value)}
-                          className="w-full p-3 rounded-2xl text-xs font-black uppercase text-orange-500 bg-white/40 border border-white/20"
-                        >
-                          <option value="None">↻ ONCE</option>
-                          <option value="Daily">↻ DAILY</option>
-                          <option value="Weekly">↻ WEEKLY</option>
-                          <option value="Monthly">↻ MONTHLY</option>
-                        </select>
-                      </div>
-
-                      <div className="space-y-1">
-                        <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Status</label>
-                        <select 
-                          value={s.status || 'Pending'} 
-                          onChange={e => handleStatusChange(s, e.target.value)}
-                          className={`w-full p-3 rounded-2xl text-xs font-black uppercase bg-white/40 border border-white/20 ${getStatusColor(s.status)}`}
-                        >
-                          <option value="Pending">Pending</option>
-                          <option value="In Progress">In Progress</option>
-                          <option value="Completed">Completed</option>
-                          <option value="Urgent">Urgent</option>
-                        </select>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ))}
+              </thead>
+              <tbody className="divide-y divide-white/10 font-sans">
+                {displayedReminders
+                  .filter(s => filters.showHidden || !s.isHidden)
+                  .map((s, idx) => {
+                    const urgency = getUrgencyInfo(s.deadline || '');
+                    return (
+                        <tr 
+                        key={s.id} 
+                        className={`group hover:bg-white/30 transition-all ${getRowBg(idx)} ${s.isHidden ? 'opacity-50' : ''} ${urgency?.isTomorrow || urgency?.isToday ? 'bg-orange-50/40 ring-1 ring-inset ring-orange-500/20' : ''} ${draggedIdx === idx ? 'opacity-40 border-2 border-dashed border-orange-400 bg-orange-50/10' : ''}`}
+                        onDragOver={(e) => {
+                          e.preventDefault();
+                        }}
+                        onDrop={(e) => {
+                          e.preventDefault();
+                          if (draggedIdx !== null && draggedIdx !== idx) {
+                            moveReminder(draggedIdx, idx);
+                          }
+                        }}
+                      >
+                        <td className="text-center p-2 text-[10px] font-bold text-slate-400 select-none">
+                          <div className="flex items-center justify-center gap-1">
+                            <div 
+                              draggable
+                              onDragStart={(e) => {
+                                setDraggedIdx(idx);
+                              }}
+                              onDragEnd={() => {
+                                setDraggedIdx(null);
+                              }}
+                              className="cursor-grab active:cursor-grabbing text-slate-300 hover:text-slate-500 p-1 shrink-0"
+                              title="Drag to reorder"
+                            >
+                              <GripVertical size={14} />
+                            </div>
+                            <div className="flex flex-col shrink-0">
+                              <button 
+                                onClick={() => moveReminder(idx, idx - 1)}
+                                disabled={idx === 0 || sortBy !== 'Manual'}
+                                className="text-slate-300 hover:text-slate-500 disabled:opacity-30 disabled:pointer-events-none p-0.5"
+                                title="Move Up"
+                              >
+                                <ChevronUp size={12} />
+                              </button>
+                              <button 
+                                onClick={() => moveReminder(idx, idx + 1)}
+                                disabled={idx === activeReminders.length - 1 || sortBy !== 'Manual'}
+                                className="text-slate-300 hover:text-slate-500 disabled:opacity-30 disabled:pointer-events-none p-0.5"
+                                title="Move Down"
+                              >
+                                <ChevronDown size={12} />
+                              </button>
+                            </div>
+                            <span className="ml-1 w-4 text-left">{idx + 1}</span>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 group/cell">
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="flex items-center gap-2 flex-1">
+                              <span className="shrink-0">
+                                {s.priority === 'Urgent' ? '🔥' : s.priority === 'High' ? '🔴' : '🟢'}
+                              </span>
+                              <MultilineInput 
+                                value={s.name || ''} 
+                                onChange={val => updateField(s.id, 'name', val)}
+                                placeholder="Enter task name..."
+                                style={{ 
+                                  fontFamily: settings?.fontFamily || "Inter, sans-serif",
+                                  fontSize: `${Math.max(14, settings?.fontSize || 15)}px`
+                                }}
+                                className="flex-1 bg-transparent font-black text-slate-900 outline-none placeholder:text-slate-500"
+                              />
+                            </div>
+                            {urgency?.isTomorrow && (
+                              <span className="px-2 py-0.5 bg-orange-100 text-orange-600 text-[8px] font-black rounded-full animate-pulse uppercase tracking-widest shrink-0">1 Day Left</span>
+                            )}
+                            {urgency?.isToday && (
+                              <span className="px-2 py-0.5 bg-red-100 text-red-600 text-[8px] font-black rounded-full animate-bounce uppercase tracking-widest shrink-0">Due Today</span>
+                            )}
+                          </div>
+                        </td>
+                        <td className="px-4">
+                          <div className={`relative flex items-center justify-center gap-1.5 px-3 py-1.5 bg-white/40 rounded-xl border border-slate-100 hover:border-orange-300 transition-all select-none cursor-pointer ${urgency?.isTomorrow || urgency?.isToday ? 'border-orange-400 ring-2 ring-orange-400/20' : ''}`}>
+                              <Calendar size={12} className="text-orange-500 shrink-0" />
+                              <span className="text-[11px] font-black text-slate-700 capitalize shrink-0">
+                                {s.deadline ? formatShortDate(s.deadline) : 'No Date'}
+                              </span>
+                              <input 
+                                type="date"
+                                value={displayToIso(s.deadline || '')} 
+                                onChange={e => updateField(s.id, 'deadline', isoToDisplay(e.target.value))}
+                                className="absolute inset-0 opacity-0 cursor-pointer w-full h-full z-10"
+                              />
+                          </div>
+                        </td>
+                        <td className="px-2 text-center">
+                          <div className="flex items-center justify-center">
+                            <select
+                              value={s.priority || 'High'}
+                              onChange={e => updateField(s.id, 'priority', e.target.value)}
+                              className={`text-[10px] font-black uppercase tracking-widest outline-none bg-white/50 border border-slate-100 rounded-lg py-1 px-1.5 text-center cursor-pointer transition-colors ${
+                                s.priority === 'Urgent' ? 'text-red-600 border-red-200 bg-red-50/20 shadow-sm shadow-red-500/10' :
+                                s.priority === 'High' ? 'text-orange-500 border-orange-100 bg-orange-50/10' :
+                                'text-emerald-600 border-emerald-100 bg-emerald-50/10'
+                              }`}
+                            >
+                              <option value="Urgent">🔥 URGENT</option>
+                              <option value="High">🔴 HIGH</option>
+                              <option value="Normal">🟢 NORMAL</option>
+                            </select>
+                          </div>
+                        </td>
+                        <td className="px-2 text-center">
+                          <div className="flex items-center justify-center">
+                            <select
+                              value={s.recurring || 'None'}
+                              onChange={e => updateField(s.id, 'recurring', e.target.value)}
+                              className="text-[10px] font-black uppercase tracking-widest text-orange-500 outline-none bg-white/50 border border-orange-100 rounded-lg py-1 px-1.5 text-center cursor-pointer transition-colors"
+                            >
+                              <option value="None">↻ ONCE</option>
+                              <option value="Daily">↻ DAILY</option>
+                              <option value="Weekly">↻ WEEKLY</option>
+                              <option value="Monthly">↻ MONTHLY</option>
+                            </select>
+                          </div>
+                        </td>
+                        <td className="px-4 text-center">
+                          <select 
+                            value={s.status || 'Pending'} 
+                            onChange={e => handleStatusChange(s, e.target.value)}
+                            style={{ 
+                              fontFamily: settings?.fontFamily || "Inter, sans-serif",
+                              fontSize: `${settings?.fontSize || 10}px`
+                            }}
+                            className={`bg-transparent font-black outline-none appearance-none cursor-pointer ${getStatusColor(s.status)}`}
+                          >
+                            <option value="Pending">Pending</option>
+                            <option value="In Progress">In Progress</option>
+                            <option value="Completed">Completed</option>
+                            <option value="Urgent">Urgent</option>
+                          </select>
+                        </td>
+                        <td className="text-center px-4">
+                          <div className="flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button 
+                              onClick={() => updateField(s.id, 'isHidden', !s.isHidden)}
+                              className={`p-1.5 rounded-lg transition-all ${s.isHidden ? 'text-orange-600' : 'text-stone-400 hover:text-orange-600'}`}
+                              title={s.isHidden ? "Unhide" : "Hide"}
+                            >
+                              {s.isHidden ? <Eye size={14} /> : <EyeOff size={14} />}
+                            </button>
+                            <button 
+                              onClick={() => onDeleteStudent(s.id)}
+                              className="p-1.5 text-slate-300 hover:text-orange-500 transition-colors"
+                              title="Delete"
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+              </tbody>
+            </table>
           </div>
+          ) : (
+            /* Board View - Column Layout */
+            <div className="flex gap-8 min-w-max pb-10 px-4">
+              {(['Pending', 'In Progress', 'Completed'] as const).map(statusGroup => {
+                const groupReminders = displayedReminders.filter(s => {
+                  if (statusGroup === 'Pending') return s.status === 'Pending' || s.status === 'Urgent' || !s.status;
+                  return s.status === statusGroup;
+                }).filter(s => filters.showHidden || !s.isHidden);
+
+                return (
+                  <div key={statusGroup} className="w-[320px] flex flex-col gap-6">
+                    <div className="flex items-center justify-between px-4">
+                      <div className="flex items-center gap-2">
+                        <div className={`w-2 h-6 rounded-full ${
+                          statusGroup === 'Pending' ? 'bg-orange-500' :
+                          statusGroup === 'In Progress' ? 'bg-indigo-500' :
+                          'bg-emerald-500'
+                        }`} />
+                        <h3 className="text-xs font-black uppercase tracking-[0.2em] text-slate-400">
+                          {statusGroup}
+                        </h3>
+                        <span className="bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full text-[10px] font-black">
+                          {groupReminders.length}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-col gap-5 p-2 bg-slate-50/50 rounded-[40px] border border-slate-100 min-h-[500px]">
+                      {groupReminders.map((s, idx) => {
+                        const urgency = getUrgencyInfo(s.deadline || '');
+                        return (
+                          <div 
+                            key={s.id} 
+                            className={`relative p-6 rounded-[32px] border border-white/20 shadow-xl transition-all group hover:scale-[1.02] hover:shadow-2xl ${getRowBg(idx)} ${s.isHidden ? 'opacity-50' : ''} ${urgency?.isTomorrow || urgency?.isToday ? 'ring-4 ring-orange-500/40 shadow-[0_0_40px_-15px_rgba(249,115,22,0.4)] bg-orange-50/30' : ''}`}
+                          >
+                            {/* Urgency Badge */}
+                            {(urgency?.isTomorrow || urgency?.isToday) && (
+                              <div className={`absolute -top-4 -right-4 px-5 py-2.5 rounded-2xl shadow-2xl z-10 flex items-center gap-2 animate-bounce border-2 border-white ${urgency.isToday ? 'bg-red-600 text-white' : 'bg-orange-500 text-white'}`}>
+                                <AlertTriangle size={18} strokeWidth={3} className="animate-pulse" />
+                                <span className="text-[11px] font-black uppercase tracking-[0.1em]">
+                                  {urgency.isToday ? 'ATTENTION: DUE NOW' : 'ATTENTION: 24H LEFT'}
+                                </span>
+                              </div>
+                            )}
+
+                            <div className="flex items-start justify-between mb-5">
+                              <div className="flex items-center gap-3">
+                                <span className="w-10 h-10 bg-white/50 backdrop-blur-md rounded-2xl flex items-center justify-center text-xs font-black text-slate-600 shadow-sm">
+                                  {idx + 1}
+                                </span>
+                                <div className="flex flex-col gap-0.5">
+                                  <button 
+                                    onClick={() => moveReminder(idx, idx - 1)}
+                                    disabled={idx === 0 || sortBy !== 'Manual'}
+                                    className="text-slate-400 hover:text-indigo-600 disabled:opacity-20"
+                                  >
+                                    <ChevronUp size={14} />
+                                  </button>
+                                  <button 
+                                    onClick={() => moveReminder(idx, idx + 1)}
+                                    disabled={idx === groupReminders.length - 1 || sortBy !== 'Manual'}
+                                    className="text-slate-400 hover:text-indigo-600 disabled:opacity-20"
+                                  >
+                                    <ChevronDown size={14} />
+                                  </button>
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <button 
+                                  onClick={() => updateField(s.id, 'isHidden', !s.isHidden)}
+                                  className="p-2.5 bg-white/50 backdrop-blur-md rounded-2xl text-slate-400 hover:text-orange-600 shadow-sm transition-all"
+                                >
+                                  {s.isHidden ? <Eye size={16} /> : <EyeOff size={16} />}
+                                </button>
+                                <button 
+                                  onClick={() => onDeleteStudent(s.id)}
+                                  className="p-2.5 bg-rose-50 rounded-2xl text-rose-500 hover:bg-rose-500 hover:text-white shadow-sm transition-all"
+                                >
+                                  <Trash2 size={16} />
+                                </button>
+                              </div>
+                            </div>
+
+                            <div className="space-y-6">
+                              <MultilineInput 
+                                value={s.name || ''} 
+                                onChange={val => updateField(s.id, 'name', val)}
+                                placeholder="What needs doing?"
+                                style={{ 
+                                  fontFamily: settings?.fontFamily || "Inter, sans-serif",
+                                  fontSize: '18px'
+                                }}
+                                className="w-full bg-transparent font-black text-slate-900 outline-none placeholder:text-slate-400 leading-tight"
+                              />
+
+                              <div className="space-y-4">
+                                <div className="flex items-center justify-between gap-4">
+                                  <div className="flex-1 space-y-1.5">
+                                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Deadline</label>
+                                    <div className={`relative flex items-center gap-3 p-3.5 bg-white/60 backdrop-blur-md rounded-2xl border border-white/40 group-hover:border-orange-300 transition-all ${urgency?.isTomorrow || urgency?.isToday ? 'border-orange-400 bg-orange-50/20' : ''}`}>
+                                      <Calendar size={16} className="text-orange-500" />
+                                      <span className="text-[11px] font-black text-slate-700">
+                                        {s.deadline ? formatShortDate(s.deadline) : 'Not Set'}
+                                      </span>
+                                      <input 
+                                        type="date"
+                                        value={displayToIso(s.deadline || '')} 
+                                        onChange={e => updateField(s.id, 'deadline', isoToDisplay(e.target.value))}
+                                        className="absolute inset-0 opacity-0 cursor-pointer"
+                                      />
+                                    </div>
+                                  </div>
+                                  <div className="flex-1 space-y-1.5">
+                                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Priority</label>
+                                    <select
+                                      value={s.priority || 'High'}
+                                      onChange={e => updateField(s.id, 'priority', e.target.value)}
+                                      className={`w-full p-3.5 rounded-2xl text-[10px] font-black uppercase tracking-widest border border-white/40 outline-none transition-all ${
+                                        s.priority === 'Urgent' ? 'text-red-600 bg-red-50/40 border-red-200 shadow-sm shadow-red-500/10' :
+                                        s.priority === 'High' ? 'text-orange-600 bg-orange-50/40 border-orange-200' :
+                                        'text-emerald-600 bg-emerald-50/40 border-emerald-200'
+                                      }`}
+                                    >
+                                      <option value="Urgent">🔥 URGENT</option>
+                                      <option value="High">🔴 HIGH</option>
+                                      <option value="Normal">🟢 NORMAL</option>
+                                    </select>
+                                  </div>
+                                </div>
+
+                                <div className="flex items-center justify-between gap-4">
+                                  <div className="flex-1 space-y-1.5">
+                                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Repeat</label>
+                                    <select
+                                      value={s.recurring || 'None'}
+                                      onChange={e => updateField(s.id, 'recurring', e.target.value)}
+                                      className="w-full p-3.5 rounded-2xl text-[10px] font-black uppercase tracking-widest text-orange-600 bg-white/60 border border-white/40 outline-none"
+                                    >
+                                      <option value="None">↻ ONCE</option>
+                                      <option value="Daily">↻ DAILY</option>
+                                      <option value="Weekly">↻ WEEKLY</option>
+                                      <option value="Monthly">↻ MONTHLY</option>
+                                    </select>
+                                  </div>
+                                  <div className="flex-1 space-y-1.5">
+                                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Status</label>
+                                    <select 
+                                      value={s.status || 'Pending'} 
+                                      onChange={e => handleStatusChange(s, e.target.value)}
+                                      className={`w-full p-3.5 rounded-2xl text-[10px] font-black uppercase tracking-widest bg-white/80 border border-white/40 outline-none ${getStatusColor(s.status)}`}
+                                    >
+                                      <option value="Pending">Pending</option>
+                                      <option value="In Progress">In Progress</option>
+                                      <option value="Completed">Completed</option>
+                                      <option value="Urgent">Urgent</option>
+                                    </select>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
 
           {displayedReminders.length === 0 && (
             <div className="py-20 text-center">
@@ -678,7 +821,7 @@ const ReminderTable: React.FC<ReminderTableProps> = ({
                     Clear History Permanently
                   </button>
                 </div>
-                <table className="w-full text-left border-collapse table-fixed min-w-[700px]">
+                <table className="w-full text-left border-collapse table-auto min-w-[700px]">
                   <thead>
                     <tr className="border-b border-white/10 text-slate-400">
                       <th className="w-12 pb-2 text-[9px] font-black uppercase tracking-wider">#</th>

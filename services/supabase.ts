@@ -46,10 +46,12 @@
  */
 
 import { createClient } from '@supabase/supabase-js';
+import { storage } from './storage';
 
 // Global connection state
 let lastSyncStatus = false;
 let isConfigCheckInProgress = false;
+let isSyncingQueue = false;
 
 // @ts-ignore
 let supabaseUrlRaw = import.meta.env.VITE_SUPABASE_URL || import.meta.env.NEXT_PUBLIC_SUPABASE_URL || import.meta.env.SUPABASE_URL || '';
@@ -159,6 +161,14 @@ export const saveData = async (userId: string, dataState: any, instant: boolean 
   if (saveTimeout) clearTimeout(saveTimeout);
   
   const performSave = async () => {
+    // Check if online
+    if (typeof window !== 'undefined' && !window.navigator.onLine) {
+      console.log("Device offline. Queuing data for sync.");
+      await storage.queueSync(userId, latestDataState);
+      lastSyncStatus = false;
+      return;
+    }
+
     try {
       const { error } = await supabase.from('dps_data').upsert(
         { owner_id: userId, data: latestDataState, updated_at: new Date().toISOString() },
@@ -166,10 +176,16 @@ export const saveData = async (userId: string, dataState: any, instant: boolean 
       );
       if (error) {
         console.error("Supabase Save Error:", error.message);
+        // If it's a network error, queue it
+        if (error.message.includes('fetch') || !window.navigator.onLine) {
+           await storage.queueSync(userId, latestDataState);
+        }
       }
       lastSyncStatus = !error;
     } catch (error) {
       console.error("Supabase exception during save:", error);
+      await storage.queueSync(userId, latestDataState);
+      lastSyncStatus = false;
     }
   };
 
@@ -180,6 +196,55 @@ export const saveData = async (userId: string, dataState: any, instant: boolean 
     saveTimeout = setTimeout(performSave, 300);
   }
 };
+
+// Process the sync queue
+export const processSyncQueue = async () => {
+  if (isSyncingQueue || !isConfigured || (typeof window !== 'undefined' && !window.navigator.onLine)) return;
+  
+  const queue = await storage.getSyncQueue();
+  if (queue.length === 0) return;
+  
+  isSyncingQueue = true;
+  console.log(`Processing ${queue.length} queued items...`);
+  
+  const idsToRemove: number[] = [];
+  
+  // To avoid redundant saves, we could just take the latest one per user, 
+  // but for simplicity we'll try to process them. 
+  // Actually, since it's an 'upsert' of the full state, we only REALLY need the latest one in the queue.
+  // But let's be safe and process sequentially for now.
+  
+  for (const item of queue) {
+    try {
+      const { error } = await supabase.from('dps_data').upsert(
+        { owner_id: item.userId, data: item.data, updated_at: new Date(item.timestamp).toISOString() },
+        { onConflict: 'owner_id' }
+      );
+      if (!error) {
+        idsToRemove.push(item.id);
+      } else {
+        // If one fails, stop processing the rest of the queue
+        break;
+      }
+    } catch (e) {
+      break;
+    }
+  }
+  
+  if (idsToRemove.length > 0) {
+    await storage.clearSyncQueue(idsToRemove);
+    console.log(`Successfully synced ${idsToRemove.length} items.`);
+    lastSyncStatus = true;
+  }
+  
+  isSyncingQueue = false;
+};
+
+// Start background sync interval
+if (typeof window !== 'undefined') {
+  setInterval(processSyncQueue, 30000); // Every 30 seconds
+  window.addEventListener('online', processSyncQueue);
+}
 
 export const uploadFile = async (userId: string, file: File): Promise<string | null> => {
   if (!isConfigured) return null;

@@ -3,6 +3,29 @@ import { Zap, Undo, Redo, Plus, Trash2, Calendar, AlignLeft, AlignCenter, AlignR
 import { AppData, DPSSTopic } from '../types';
 import { v4 as uuidv4 } from 'uuid';
 import { callNeuralEngine } from '../services/neuralEngine';
+
+const COLOR_OPTIONS_12 = [
+  { key: 'slate', hex: '#475569', bg: '#f8fafc', border: '#cbd5e1', name: 'Slate' },
+  { key: 'rose', hex: '#e11d48', bg: '#fff1f2', border: '#fecdd3', name: 'Rose' },
+  { key: 'pink', hex: '#db2777', bg: '#fdf2f8', border: '#fbcfe8', name: 'Pink' },
+  { key: 'violet', hex: '#7c3aed', bg: '#f5f3ff', border: '#ddd6fe', name: 'Violet' },
+  { key: 'indigo', hex: '#4f46e5', bg: '#eef2ff', border: '#c7d2fe', name: 'Indigo' },
+  { key: 'blue', hex: '#2563eb', bg: '#eff6ff', border: '#bfdbfe', name: 'Blue' },
+  { key: 'sky', hex: '#0284c7', bg: '#f0f9ff', border: '#bae6fd', name: 'Sky' },
+  { key: 'cyan', hex: '#0891b2', bg: '#ecfeff', border: '#a5f3fc', name: 'Cyan' },
+  { key: 'teal', hex: '#0d9488', bg: '#f0fdfa', border: '#99f6e4', name: 'Teal' },
+  { key: 'emerald', hex: '#059669', bg: '#ecfdf5', border: '#a7f3d0', name: 'Emerald' },
+  { key: 'amber', hex: '#d97706', bg: '#fffbeb', border: '#fde68a', name: 'Amber' },
+  { key: 'orange', hex: '#ea580c', bg: '#fff7ed', border: '#fed7aa', name: 'Orange' }
+];
+
+const hexToRgba = (hex: string, opacity: number) => {
+  if (!hex.startsWith('#')) return hex;
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  return `rgba(${r}, ${g}, ${b}, ${opacity / 100})`;
+};
 import { AISelfLearningModal } from './AISelfLearningModal';
 import { PAPER_STYLES } from '../src/styles/paperStyles';
 // @ts-ignore
@@ -65,6 +88,7 @@ interface SelfLearningTableProps {
 export const SelfLearningTable: React.FC<SelfLearningTableProps> = ({ data, onUpdate, onUpdateTopic, onOpenSidebar }) => {
   const [selectedTopicId, setSelectedTopicId] = useState<string | null>(null);
   const [isTableResizeLocked, setIsTableResizeLocked] = useState(true);
+  const [gridOpacity, setGridOpacity] = useState(100);
   const [showRuler, setShowRuler] = useState(false);
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const [menuPlacement, setMenuPlacement] = useState<'down' | 'up'>('down');
@@ -2732,43 +2756,36 @@ export const SelfLearningTable: React.FC<SelfLearningTableProps> = ({ data, onUp
 
   const insertPersonalInfoTable = (theme = 'slate') => {
     if (!selectedTopic) return;
-    const configs: Record<string, { border: string; bg: string; text: string }> = {
-      violet: { border: '#ddd6fe', bg: '#f5f3ff', text: '#6d28d9' },
-      emerald: { border: '#bbf7d0', bg: '#f0fdf4', text: '#047857' },
-      rose: { border: '#fecdd3', bg: '#fff1f2', text: '#be123c' },
-      blue: { border: '#bfdbfe', bg: '#f0f7ff', text: '#1d4ed8' },
-      gold: { border: '#fef08a', bg: '#fefce8', text: '#a16207' },
-      slate: { border: '#cbd5e1', bg: '#f8fafc', text: '#334155' },
-      indigo: { border: '#c7d2fe', bg: '#eef2ff', text: '#4338ca' },
-      amber: { border: '#fde68a', bg: '#fffbeb', text: '#b45309' },
-      sky: { border: '#bae6fd', bg: '#f0f9ff', text: '#0284c7' },
-      teal: { border: '#99f6e4', bg: '#f0fdfa', text: '#0d9488' }
-    };
+    const configs: Record<string, { border: string; bg: string; text: string }> = {};
+    COLOR_OPTIONS_12.forEach(c => {
+      configs[c.key] = { border: c.border, bg: c.bg, text: c.hex };
+    });
     const c = configs[theme] || configs.slate;
-    const html = `<div class="table-scroll-container" style="overflow-x: auto; max-width: 100%; border-radius: 12px; margin: 16px 0; border: 1px solid ${c.border};">
+    const borderColor = hexToRgba(c.border, gridOpacity);
+    const html = `<div class="table-scroll-container" style="overflow-x: auto; max-width: 100%; border-radius: 12px; margin: 16px 0; border: 1px solid ${borderColor};">
   <table class="card-stack" style="width: 100%; border-collapse: collapse; font-size: 13px;">
     <thead>
-      <tr style="background-color: ${c.bg}; border-bottom: 2px solid ${c.border};">
+      <tr style="background-color: ${c.bg}; border-bottom: 2px solid ${borderColor};">
         <th style="padding: 12px; text-align: left; font-weight: 800; text-transform: uppercase; color: ${c.text}; font-size: 10px; width: 120px;">Attribute</th>
         <th style="padding: 12px; text-align: left; font-weight: 800; text-transform: uppercase; color: ${c.text}; font-size: 10px;">Information Details</th>
       </tr>
     </thead>
     <tbody>
       <tr>
-        <td style="padding: 12px; border-bottom: 1px solid #f1f5f9; font-weight: 800; background-color: #f8fafc;">Full Name</td>
-        <td style="padding: 12px; border-bottom: 1px solid #f1f5f9;">[Enter Name]</td>
+        <td style="padding: 12px; border-bottom: 1px solid ${borderColor}; font-weight: 800; background-color: #f8fafc;">Full Name</td>
+        <td style="padding: 12px; border-bottom: 1px solid ${borderColor};">[Enter Name]</td>
       </tr>
       <tr>
-        <td style="padding: 12px; border-bottom: 1px solid #f1f5f9; font-weight: 800; background-color: #f8fafc;">Email Address</td>
-        <td style="padding: 12px; border-bottom: 1px solid #f1f5f9;">[Enter Email]</td>
+        <td style="padding: 12px; border-bottom: 1px solid ${borderColor}; font-weight: 800; background-color: #f8fafc;">Email Address</td>
+        <td style="padding: 12px; border-bottom: 1px solid ${borderColor};">[Enter Email]</td>
       </tr>
       <tr>
-        <td style="padding: 12px; border-bottom: 1px solid #f1f5f9; font-weight: 800; background-color: #f8fafc;">Phone Number</td>
-        <td style="padding: 12px; border-bottom: 1px solid #f1f5f9;">[Enter Phone]</td>
+        <td style="padding: 12px; border-bottom: 1px solid ${borderColor}; font-weight: 800; background-color: #f8fafc;">Phone Number</td>
+        <td style="padding: 12px; border-bottom: 1px solid ${borderColor};">[Enter Phone]</td>
       </tr>
       <tr>
-        <td style="padding: 12px; border-bottom: 1px solid #f1f5f9; font-weight: 800; background-color: #f8fafc;">Department</td>
-        <td style="padding: 12px; border-bottom: 1px solid #f1f5f9;">[Enter Department]</td>
+        <td style="padding: 12px; border-bottom: 1px solid ${borderColor}; font-weight: 800; background-color: #f8fafc;">Department</td>
+        <td style="padding: 12px; border-bottom: 1px solid ${borderColor};">[Enter Department]</td>
       </tr>
     </tbody>
   </table>
@@ -2788,23 +2805,16 @@ export const SelfLearningTable: React.FC<SelfLearningTableProps> = ({ data, onUp
 
   const insertTaskMatrix = (theme = 'rose') => {
     if (!selectedTopic) return;
-    const configs: Record<string, { border: string; bg: string; text: string }> = {
-      violet: { border: '#ddd6fe', bg: '#f5f3ff', text: '#6d28d9' },
-      emerald: { border: '#bbf7d0', bg: '#f0fdf4', text: '#047857' },
-      rose: { border: '#fecdd3', bg: '#fff1f2', text: '#be123c' },
-      blue: { border: '#bfdbfe', bg: '#f0f7ff', text: '#1d4ed8' },
-      gold: { border: '#fef08a', bg: '#fefce8', text: '#a16207' },
-      slate: { border: '#cbd5e1', bg: '#f8fafc', text: '#334155' },
-      indigo: { border: '#c7d2fe', bg: '#eef2ff', text: '#4338ca' },
-      amber: { border: '#fde68a', bg: '#fffbeb', text: '#b45309' },
-      sky: { border: '#bae6fd', bg: '#f0f9ff', text: '#0284c7' },
-      teal: { border: '#99f6e4', bg: '#f0fdfa', text: '#0d9488' }
-    };
+    const configs: Record<string, { border: string; bg: string; text: string }> = {};
+    COLOR_OPTIONS_12.forEach(c => {
+      configs[c.key] = { border: c.border, bg: c.bg, text: c.hex };
+    });
     const c = configs[theme] || configs.rose;
-    const html = `<div class="table-scroll-container" style="overflow-x: auto; max-width: 100%; border-radius: 12px; margin: 16px 0; border: 1px solid ${c.border};">
+    const borderColor = hexToRgba(c.border, gridOpacity);
+    const html = `<div class="table-scroll-container" style="overflow-x: auto; max-width: 100%; border-radius: 12px; margin: 16px 0; border: 1px solid ${borderColor};">
   <table class="card-stack" style="width: 100%; border-collapse: collapse; font-size: 13px;">
     <thead>
-      <tr style="background-color: ${c.bg}; border-bottom: 2px solid ${c.border};">
+      <tr style="background-color: ${c.bg}; border-bottom: 2px solid ${borderColor};">
         <th style="padding: 12px; text-align: left; font-weight: 800; text-transform: uppercase; color: ${c.text}; font-size: 10px; width: 50px;">No.</th>
         <th style="padding: 12px; text-align: left; font-weight: 800; text-transform: uppercase; color: ${c.text}; font-size: 10px;">Strategic Task</th>
         <th style="padding: 12px; text-align: center; font-weight: 800; text-transform: uppercase; color: ${c.text}; font-size: 10px; width: 100px;">Priority</th>
@@ -2813,10 +2823,10 @@ export const SelfLearningTable: React.FC<SelfLearningTableProps> = ({ data, onUp
     </thead>
     <tbody>
       <tr>
-        <td data-label="No." style="padding: 12px; border-bottom: 1px solid #f1f5f9; text-align: center; font-weight: 800;">1</td>
-        <td data-label="Task" style="padding: 12px; border-bottom: 1px solid #f1f5f9;">[Enter Primary Focus]</td>
-        <td data-label="Priority" style="padding: 12px; border-bottom: 1px solid #f1f5f9; text-align: center;"><span style="background: #fef2f2; color: #ef4444; padding: 2px 8px; border-radius: 6px; font-weight: 900; font-size: 10px;">🔥 HIGH</span></td>
-        <td data-label="Status" style="padding: 12px; border-bottom: 1px solid #f1f5f9; text-align: center;"><span contenteditable="false" class="task-checkbox" style="cursor: pointer; user-select: none;">⬜</span> Pending</td>
+        <td data-label="No." style="padding: 12px; border-bottom: 1px solid ${borderColor}; text-align: center; font-weight: 800;">1</td>
+        <td data-label="Task" style="padding: 12px; border-bottom: 1px solid ${borderColor};">[Enter Primary Focus]</td>
+        <td data-label="Priority" style="padding: 12px; border-bottom: 1px solid ${borderColor}; text-align: center;"><span style="background: #fef2f2; color: #ef4444; padding: 2px 8px; border-radius: 6px; font-weight: 900; font-size: 10px;">🔥 HIGH</span></td>
+        <td data-label="Status" style="padding: 12px; border-bottom: 1px solid ${borderColor}; text-align: center;"><span contenteditable="false" class="task-checkbox" style="cursor: pointer; user-select: none;">⬜</span> Pending</td>
       </tr>
     </tbody>
   </table>
@@ -2838,23 +2848,16 @@ export const SelfLearningTable: React.FC<SelfLearningTableProps> = ({ data, onUp
 
   const insertResearchLibrary = (theme = 'indigo') => {
     if (!selectedTopic) return;
-    const configs: Record<string, { border: string; bg: string; text: string }> = {
-      violet: { border: '#ddd6fe', bg: '#f5f3ff', text: '#6d28d9' },
-      emerald: { border: '#bbf7d0', bg: '#f0fdf4', text: '#047857' },
-      rose: { border: '#fecdd3', bg: '#fff1f2', text: '#be123c' },
-      blue: { border: '#bfdbfe', bg: '#f0f7ff', text: '#1d4ed8' },
-      gold: { border: '#fef08a', bg: '#fefce8', text: '#a16207' },
-      slate: { border: '#cbd5e1', bg: '#f8fafc', text: '#334155' },
-      indigo: { border: '#c7d2fe', bg: '#eef2ff', text: '#4338ca' },
-      amber: { border: '#fde68a', bg: '#fffbeb', text: '#b45309' },
-      sky: { border: '#bae6fd', bg: '#f0f9ff', text: '#0284c7' },
-      teal: { border: '#99f6e4', bg: '#f0fdfa', text: '#0d9488' }
-    };
+    const configs: Record<string, { border: string; bg: string; text: string }> = {};
+    COLOR_OPTIONS_12.forEach(c => {
+      configs[c.key] = { border: c.border, bg: c.bg, text: c.hex };
+    });
     const c = configs[theme] || configs.indigo;
-    const html = `<div class="table-scroll-container" style="overflow-x: auto; max-width: 100%; border-radius: 12px; margin: 16px 0; border: 1px solid ${c.border};">
+    const borderColor = hexToRgba(c.border, gridOpacity);
+    const html = `<div class="table-scroll-container" style="overflow-x: auto; max-width: 100%; border-radius: 12px; margin: 16px 0; border: 1px solid ${borderColor};">
   <table class="card-stack" style="width: 100%; border-collapse: collapse; font-size: 13px;">
     <thead>
-      <tr style="background-color: ${c.bg}; border-bottom: 2px solid ${c.border};">
+      <tr style="background-color: ${c.bg}; border-bottom: 2px solid ${borderColor};">
         <th style="padding: 12px; text-align: left; font-weight: 800; text-transform: uppercase; color: ${c.text}; font-size: 10px; width: 80px;">Type</th>
         <th style="padding: 12px; text-align: left; font-weight: 800; text-transform: uppercase; color: ${c.text}; font-size: 10px;">Resource Name</th>
         <th style="padding: 12px; text-align: left; font-weight: 800; text-transform: uppercase; color: ${c.text}; font-size: 10px;">Category</th>
@@ -2863,10 +2866,10 @@ export const SelfLearningTable: React.FC<SelfLearningTableProps> = ({ data, onUp
     </thead>
     <tbody>
       <tr>
-        <td data-label="Type" style="padding: 12px; border-bottom: 1px solid #f1f5f9; text-align: center; font-size: 18px;">📄</td>
-        <td data-label="Name" style="padding: 12px; border-bottom: 1px solid #f1f5f9; font-weight: 700;">[Academic Paper Title]</td>
-        <td data-label="Cat" style="padding: 12px; border-bottom: 1px solid #f1f5f9;"><span style="background: #f0fdf4; color: #166534; padding: 2px 8px; border-radius: 6px; font-size: 10px;">RESEARCH</span></td>
-        <td data-label="Action" style="padding: 12px; border-bottom: 1px solid #f1f5f9;"><a href="#" style="color: #2563eb; font-weight: 800; text-decoration: none;">OPEN ↗</a></td>
+        <td data-label="Type" style="padding: 12px; border-bottom: 1px solid ${borderColor}; text-align: center; font-size: 18px;">📄</td>
+        <td data-label="Name" style="padding: 12px; border-bottom: 1px solid ${borderColor}; font-weight: 700;">[Academic Paper Title]</td>
+        <td data-label="Cat" style="padding: 12px; border-bottom: 1px solid ${borderColor};"><span style="background: #f0fdf4; color: #166534; padding: 2px 8px; border-radius: 6px; font-size: 10px;">RESEARCH</span></td>
+        <td data-label="Action" style="padding: 12px; border-bottom: 1px solid ${borderColor};"><a href="#" style="color: #2563eb; font-weight: 800; text-decoration: none;">OPEN ↗</a></td>
       </tr>
     </tbody>
   </table>
@@ -6493,24 +6496,31 @@ export const SelfLearningTable: React.FC<SelfLearningTableProps> = ({ data, onUp
 
                                 {/* Task Matrix */}
                                 <div className="space-y-1.5 bg-slate-50/70 p-2.5 rounded-2xl border border-slate-100 mt-2">
-                                  <div className="text-[10px] font-extrabold text-blue-700 flex items-center gap-1.5 tracking-wider select-none uppercase">
-                                    <Activity size={13} className="text-blue-500" /> Insert Task Matrix
+                                  <div className="flex items-center justify-between">
+                                    <div className="text-[10px] font-extrabold text-blue-700 flex items-center gap-1.5 tracking-wider select-none uppercase">
+                                      <Activity size={13} className="text-blue-500" /> Insert Task Matrix
+                                    </div>
+                                    <div className="flex items-center gap-1">
+                                      {[10, 25, 50, 75, 100].map(op => (
+                                        <button 
+                                          key={op}
+                                          onClick={() => setGridOpacity(op)}
+                                          className={`text-[8px] px-1 rounded-md font-bold transition-all ${gridOpacity === op ? 'bg-blue-500 text-white shadow-sm' : 'bg-white text-slate-400 hover:bg-slate-100'}`}
+                                        >
+                                          {op}%
+                                        </button>
+                                      ))}
+                                    </div>
                                   </div>
-                                  <div className="grid grid-cols-5 gap-1.5 pt-1">
-                                    {[
-                                      { key: 'blue', hex: '#2563eb', bg: '#f0f7ff', border: '#bfdbfe', name: 'Blue' },
-                                      { key: 'emerald', hex: '#059669', bg: '#f0fdf4', border: '#bbf7d0', name: 'Emerald' },
-                                      { key: 'rose', hex: '#dc2626', bg: '#fff1f2', border: '#fecdd3', name: 'Rose' },
-                                      { key: 'amber', hex: '#d97706', bg: '#fffbeb', border: '#fde68a', name: 'Amber' },
-                                      { key: 'violet', hex: '#7c3aed', bg: '#f5f3ff', border: '#ddd6fe', name: 'Violet' }
-                                    ].map((colorObj) => (
+                                  <div className="grid grid-cols-6 gap-1.5 pt-1">
+                                    {COLOR_OPTIONS_12.map((colorObj) => (
                                       <button
                                         key={colorObj.key}
                                         type="button"
                                         onClick={() => { insertTaskMatrix(colorObj.key); setShowMoreMenu(false); }}
                                         className="w-8 h-8 rounded-full border flex items-center justify-center hover:scale-115 active:scale-95 transition-all duration-200 shadow-sm cursor-pointer"
-                                        style={{ backgroundColor: colorObj.bg, borderColor: colorObj.border }}
-                                        title={`Insert Matrix in ${colorObj.name}`}
+                                        style={{ backgroundColor: colorObj.bg, borderColor: hexToRgba(colorObj.border, gridOpacity) }}
+                                        title={`Insert Matrix in ${colorObj.name} (Grid: ${gridOpacity}%)`}
                                       >
                                         <div 
                                           className="w-3 h-3 rounded-full shadow-sm"
@@ -6523,24 +6533,31 @@ export const SelfLearningTable: React.FC<SelfLearningTableProps> = ({ data, onUp
 
                                 {/* Research Dossier */}
                                 <div className="space-y-1.5 bg-slate-50/70 p-2.5 rounded-2xl border border-slate-100 mt-2">
-                                  <div className="text-[10px] font-extrabold text-indigo-700 flex items-center gap-1.5 tracking-wider select-none uppercase">
-                                    <BookOpen size={13} className="text-indigo-500" /> Insert Research Library
+                                  <div className="flex items-center justify-between">
+                                    <div className="text-[10px] font-extrabold text-indigo-700 flex items-center gap-1.5 tracking-wider select-none uppercase">
+                                      <BookOpen size={13} className="text-indigo-500" /> Insert Research Library
+                                    </div>
+                                    <div className="flex items-center gap-1">
+                                      {[10, 25, 50, 75, 100].map(op => (
+                                        <button 
+                                          key={op}
+                                          onClick={() => setGridOpacity(op)}
+                                          className={`text-[8px] px-1 rounded-md font-bold transition-all ${gridOpacity === op ? 'bg-indigo-500 text-white shadow-sm' : 'bg-white text-slate-400 hover:bg-slate-100'}`}
+                                        >
+                                          {op}%
+                                        </button>
+                                      ))}
+                                    </div>
                                   </div>
-                                  <div className="grid grid-cols-5 gap-1.5 pt-1">
-                                    {[
-                                      { key: 'indigo', hex: '#4f46e5', bg: '#eef2ff', border: '#c7d2fe', name: 'Indigo' },
-                                      { key: 'sky', hex: '#0284c7', bg: '#f0f9ff', border: '#bae6fd', name: 'Sky' },
-                                      { key: 'teal', hex: '#0d9488', bg: '#f0fdfa', border: '#99f6e4', name: 'Teal' },
-                                      { key: 'slate', hex: '#4b5563', bg: '#f8fafc', border: '#cbd5e1', name: 'Slate' },
-                                      { key: 'violet', hex: '#7c3aed', bg: '#f5f3ff', border: '#ddd6fe', name: 'Violet' }
-                                    ].map((colorObj) => (
+                                  <div className="grid grid-cols-6 gap-1.5 pt-1">
+                                    {COLOR_OPTIONS_12.map((colorObj) => (
                                       <button
                                         key={colorObj.key}
                                         type="button"
                                         onClick={() => { insertResearchLibrary(colorObj.key); setShowMoreMenu(false); }}
                                         className="w-8 h-8 rounded-full border flex items-center justify-center hover:scale-115 active:scale-95 transition-all duration-200 shadow-sm cursor-pointer"
-                                        style={{ backgroundColor: colorObj.bg, borderColor: colorObj.border }}
-                                        title={`Insert Research in ${colorObj.name}`}
+                                        style={{ backgroundColor: colorObj.bg, borderColor: hexToRgba(colorObj.border, gridOpacity) }}
+                                        title={`Insert Research in ${colorObj.name} (Grid: ${gridOpacity}%)`}
                                       >
                                         <div 
                                           className="w-3 h-3 rounded-full shadow-sm"
@@ -6553,13 +6570,39 @@ export const SelfLearningTable: React.FC<SelfLearningTableProps> = ({ data, onUp
 
                                 {/* Personal Info Table */}
                                 <div className="space-y-1.5 bg-slate-50/70 p-2.5 rounded-2xl border border-slate-100 mt-2">
-                                  <button
-                                    type="button"
-                                    onClick={() => { insertPersonalInfoTable('slate'); setShowMoreMenu(false); }}
-                                    className="w-full py-2 px-3 bg-slate-600 hover:bg-slate-700 text-white border border-slate-500 rounded-xl font-bold text-[10px] tracking-wider uppercase transition-colors flex items-center justify-center gap-1.5"
-                                  >
-                                    <User size={13} /> Personal Information Table
-                                  </button>
+                                  <div className="flex items-center justify-between">
+                                    <div className="text-[10px] font-extrabold text-slate-700 flex items-center gap-1.5 tracking-wider select-none uppercase">
+                                      <User size={13} className="text-slate-500" /> Personal Information
+                                    </div>
+                                    <div className="flex items-center gap-1">
+                                      {[10, 25, 50, 75, 100].map(op => (
+                                        <button 
+                                          key={op}
+                                          onClick={() => setGridOpacity(op)}
+                                          className={`text-[8px] px-1 rounded-md font-bold transition-all ${gridOpacity === op ? 'bg-slate-500 text-white shadow-sm' : 'bg-white text-slate-400 hover:bg-slate-100'}`}
+                                        >
+                                          {op}%
+                                        </button>
+                                      ))}
+                                    </div>
+                                  </div>
+                                  <div className="grid grid-cols-6 gap-1.5 pt-1">
+                                    {COLOR_OPTIONS_12.map((colorObj) => (
+                                      <button
+                                        key={colorObj.key}
+                                        type="button"
+                                        onClick={() => { insertPersonalInfoTable(colorObj.key); setShowMoreMenu(false); }}
+                                        className="w-8 h-8 rounded-full border flex items-center justify-center hover:scale-115 active:scale-95 transition-all duration-200 shadow-sm cursor-pointer"
+                                        style={{ backgroundColor: colorObj.bg, borderColor: hexToRgba(colorObj.border, gridOpacity) }}
+                                        title={`Insert Personal Info in ${colorObj.name} (Grid: ${gridOpacity}%)`}
+                                      >
+                                        <div 
+                                          className="w-3 h-3 rounded-full shadow-sm"
+                                          style={{ backgroundColor: colorObj.hex }}
+                                        />
+                                      </button>
+                                    ))}
+                                  </div>
                                 </div>
                               </div>
                             </div>

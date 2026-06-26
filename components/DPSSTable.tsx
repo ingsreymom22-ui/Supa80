@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
-import { Zap, Undo, Redo, Plus, Trash2, Calendar, AlignLeft, AlignCenter, AlignRight, Highlighter, Type, Settings2, MousePointer2, Minus, Layout, Square, Quote, FileUp, FileDown, Loader2, Wand2, Menu, ChevronLeft, FileText, ChevronDown, ChevronRight, Table, Grid3X3, LayoutGrid, Columns, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Palette, Italic, Underline, Strikethrough, Indent, Outdent, List, ListOrdered, CheckSquare, MoreHorizontal, Download, Maximize2, Minimize2, Search, Archive, Folder, Star, Share2, Pencil, Lock, Unlock, ArrowRightLeft, GraduationCap, Copy, GripVertical, Ruler, Sparkles, Layers, MessageSquare, Check, Bookmark, Activity, BookOpen } from 'lucide-react';
+import { Zap, Undo, Redo, Plus, Trash2, Calendar, AlignLeft, AlignCenter, AlignRight, Highlighter, Type, Settings2, MousePointer2, Minus, Layout, Square, Quote, FileUp, FileDown, Loader2, Wand2, Menu, ChevronLeft, FileText, ChevronDown, ChevronRight, Table, Grid3X3, LayoutGrid, Columns, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Palette, Italic, Underline, Strikethrough, Indent, Outdent, List, ListOrdered, CheckSquare, MoreHorizontal, Download, Maximize2, Minimize2, Search, Archive, Folder, Star, Share2, Pencil, Lock, Unlock, ArrowRightLeft, GraduationCap, Copy, GripVertical, Ruler, Sparkles, Layers, MessageSquare, Check, Bookmark, Activity, BookOpen, User } from 'lucide-react';
 import { AppData, DPSSTopic } from '../types';
 import { v4 as uuidv4 } from 'uuid';
 import { callNeuralEngine } from '../services/neuralEngine';
@@ -3005,6 +3005,63 @@ export const DPSSTable: React.FC<DPSSTableProps> = ({ data, onUpdate, onUpdateTo
     }
   };
 
+  const insertPersonalInfoTable = (theme = 'slate') => {
+    const configs: Record<string, { border: string; bg: string; text: string }> = {
+      violet: { border: '#ddd6fe', bg: '#f5f3ff', text: '#6d28d9' },
+      emerald: { border: '#bbf7d0', bg: '#f0fdf4', text: '#047857' },
+      rose: { border: '#fecdd3', bg: '#fff1f2', text: '#be123c' },
+      blue: { border: '#bfdbfe', bg: '#f0f7ff', text: '#1d4ed8' },
+      gold: { border: '#fef08a', bg: '#fefce8', text: '#a16207' },
+      slate: { border: '#cbd5e1', bg: '#f8fafc', text: '#334155' },
+      indigo: { border: '#c7d2fe', bg: '#eef2ff', text: '#4338ca' },
+      amber: { border: '#fde68a', bg: '#fffbeb', text: '#b45309' },
+      sky: { border: '#bae6fd', bg: '#f0f9ff', text: '#0284c7' },
+      teal: { border: '#99f6e4', bg: '#f0fdfa', text: '#0d9488' }
+    };
+    const c = configs[theme] || configs.slate;
+    const html = `<div class="table-scroll-container" style="overflow-x: auto; max-width: 100%; border-radius: 12px; margin: 16px 0; border: 1px solid ${c.border};">
+  <table class="card-stack" style="width: 100%; border-collapse: collapse; font-size: 13px;">
+    <thead>
+      <tr style="background-color: ${c.bg}; border-bottom: 2px solid ${c.border};">
+        <th style="padding: 12px; text-align: left; font-weight: 800; text-transform: uppercase; color: ${c.text}; font-size: 10px; width: 120px;">Attribute</th>
+        <th style="padding: 12px; text-align: left; font-weight: 800; text-transform: uppercase; color: ${c.text}; font-size: 10px;">Information Details</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td style="padding: 12px; border-bottom: 1px solid #f1f5f9; font-weight: 800; background-color: #f8fafc;">Full Name</td>
+        <td style="padding: 12px; border-bottom: 1px solid #f1f5f9;">[Enter Name]</td>
+      </tr>
+      <tr>
+        <td style="padding: 12px; border-bottom: 1px solid #f1f5f9; font-weight: 800; background-color: #f8fafc;">Email Address</td>
+        <td style="padding: 12px; border-bottom: 1px solid #f1f5f9;">[Enter Email]</td>
+      </tr>
+      <tr>
+        <td style="padding: 12px; border-bottom: 1px solid #f1f5f9; font-weight: 800; background-color: #f8fafc;">Phone Number</td>
+        <td style="padding: 12px; border-bottom: 1px solid #f1f5f9;">[Enter Phone]</td>
+      </tr>
+      <tr>
+        <td style="padding: 12px; border-bottom: 1px solid #f1f5f9; font-weight: 800; background-color: #f8fafc;">Department</td>
+        <td style="padding: 12px; border-bottom: 1px solid #f1f5f9;">[Enter Department]</td>
+      </tr>
+    </tbody>
+  </table>
+ </div><p><br></p>`;
+
+    if (editorRef.current) {
+      editorRef.current.focus();
+      if (savedRange.current) {
+        const selection = window.getSelection();
+        selection?.removeAllRanges();
+        selection?.addRange(savedRange.current);
+      }
+      document.execCommand('insertHTML', false, html);
+      if (selectedTopic) {
+        updateTopic(selectedTopic.id, { content: editorRef.current.innerHTML });
+      }
+    }
+  };
+
   const insertTaskMatrix = (theme = 'rose') => {
     const configs: Record<string, { border: string; bg: string; text: string }> = {
       violet: { border: '#ddd6fe', bg: '#f5f3ff', text: '#6d28d9' },
@@ -5320,19 +5377,6 @@ export const DPSSTable: React.FC<DPSSTableProps> = ({ data, onUpdate, onUpdateTo
                             <div className="px-2 py-1 text-[10px] font-black text-slate-400 border-b border-slate-50 uppercase tracking-wider">Display & Tools</div>
                           
                           <button
-                            onClick={() => { setIsTableResizeLocked(!isTableResizeLocked); setShowPageOptions(false); }}
-                            className="flex items-center justify-between p-2 hover:bg-slate-50 rounded-xl transition-colors group"
-                          >
-                            <div className="flex items-center gap-2">
-                              {isTableResizeLocked ? <Lock size={14} className="text-slate-400" /> : <Unlock size={14} className="text-orange-500" />}
-                              <span className="text-xs font-bold text-slate-700">Column Resizing</span>
-                            </div>
-                            <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ${isTableResizeLocked ? 'bg-slate-100 text-slate-500' : 'bg-orange-100 text-orange-600'}`}>
-                              {isTableResizeLocked ? 'Locked' : 'Unlocked'}
-                            </span>
-                          </button>
-
-                          <button
                             onClick={() => { setShowRuler(!showRuler); setShowPageOptions(false); }}
                             className="flex items-center justify-between p-2 hover:bg-slate-50 rounded-xl transition-colors group"
                           >
@@ -5457,6 +5501,19 @@ export const DPSSTable: React.FC<DPSSTableProps> = ({ data, onUpdate, onUpdateTo
                         
                         {showTableToolsMenu && (
                           <div className="absolute left-0 top-full mt-2 z-[250] w-52 bg-white rounded-2xl shadow-2xl border border-slate-200 p-2.5 flex flex-col gap-1.5 animate-in slide-in-from-top-2 duration-150">
+                            <button
+                              onClick={() => { setIsTableResizeLocked(!isTableResizeLocked); setShowTableToolsMenu(false); }}
+                              className="flex items-center justify-between p-1.5 hover:bg-slate-50 rounded-xl transition-colors group w-full text-left"
+                            >
+                              <div className="flex items-center gap-1.5">
+                                {isTableResizeLocked ? <Lock size={12} className="text-slate-400" /> : <Unlock size={12} className="text-orange-500" />}
+                                <span className="text-xs font-bold text-slate-700">Column Resizing</span>
+                              </div>
+                              <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ${isTableResizeLocked ? 'bg-slate-100 text-slate-500' : 'bg-orange-100 text-orange-600'}`}>
+                                {isTableResizeLocked ? 'Locked' : 'Unlocked'}
+                              </span>
+                            </button>
+                            <div className="h-px bg-slate-100 my-0.5" />
                             {activeTableCell ? (
                               <>
                                 <div className="px-2 py-1 text-[10px] font-black text-slate-400 uppercase tracking-wider text-left">Word-Style Controls</div>
@@ -5798,22 +5855,77 @@ export const DPSSTable: React.FC<DPSSTableProps> = ({ data, onUpdate, onUpdateTo
                                       Smart Check
                                     </button>
                                   </div>
-                                  <div className="flex gap-2 pt-1">
-                                    <button
-                                      type="button"
-                                      onClick={() => { insertTaskMatrix('blue'); setShowMoreMenu(false); }}
-                                      className="flex-1 py-1.5 px-2 bg-blue-500 hover:bg-blue-600 text-white border border-blue-400 rounded-xl font-bold text-[10px] tracking-wider uppercase transition-colors flex items-center justify-center gap-1"
-                                    >
-                                      <Activity size={12} /> Matrix
-                                    </button>
-                                    <button
-                                      type="button"
-                                      onClick={() => { insertResearchLibrary('indigo'); setShowMoreMenu(false); }}
-                                      className="flex-1 py-1.5 px-2 bg-indigo-500 hover:bg-indigo-600 text-white border border-indigo-400 rounded-xl font-bold text-[10px] tracking-wider uppercase transition-colors flex items-center justify-center gap-1"
-                                    >
-                                      <BookOpen size={12} /> Research
-                                    </button>
+                                </div>
+
+                                {/* Task Matrix */}
+                                <div className="space-y-1.5 bg-slate-50/70 p-2.5 rounded-2xl border border-slate-100">
+                                  <div className="text-[10px] font-extrabold text-blue-700 flex items-center gap-1.5 tracking-wider select-none uppercase">
+                                    <Activity size={13} className="text-blue-500" /> Insert Task Matrix
                                   </div>
+                                  <div className="grid grid-cols-5 gap-1.5 pt-1">
+                                    {[
+                                      { key: 'blue', hex: '#2563eb', bg: '#f0f7ff', border: '#bfdbfe', name: 'Blue' },
+                                      { key: 'emerald', hex: '#059669', bg: '#f0fdf4', border: '#bbf7d0', name: 'Emerald' },
+                                      { key: 'rose', hex: '#dc2626', bg: '#fff1f2', border: '#fecdd3', name: 'Rose' },
+                                      { key: 'amber', hex: '#d97706', bg: '#fffbeb', border: '#fde68a', name: 'Amber' },
+                                      { key: 'violet', hex: '#7c3aed', bg: '#f5f3ff', border: '#ddd6fe', name: 'Violet' }
+                                    ].map((colorObj) => (
+                                      <button
+                                        key={colorObj.key}
+                                        type="button"
+                                        onClick={() => { insertTaskMatrix(colorObj.key); setShowMoreMenu(false); }}
+                                        className="w-8 h-8 rounded-full border flex items-center justify-center hover:scale-115 active:scale-95 transition-all duration-200 shadow-sm cursor-pointer"
+                                        style={{ backgroundColor: colorObj.bg, borderColor: colorObj.border }}
+                                        title={`Insert Matrix in ${colorObj.name}`}
+                                      >
+                                        <div 
+                                          className="w-3 h-3 rounded-full shadow-sm"
+                                          style={{ backgroundColor: colorObj.hex }}
+                                        />
+                                      </button>
+                                    ))}
+                                  </div>
+                                </div>
+
+                                {/* Research Dossier */}
+                                <div className="space-y-1.5 bg-slate-50/70 p-2.5 rounded-2xl border border-slate-100">
+                                  <div className="text-[10px] font-extrabold text-indigo-700 flex items-center gap-1.5 tracking-wider select-none uppercase">
+                                    <BookOpen size={13} className="text-indigo-500" /> Insert Research Library
+                                  </div>
+                                  <div className="grid grid-cols-5 gap-1.5 pt-1">
+                                    {[
+                                      { key: 'indigo', hex: '#4f46e5', bg: '#eef2ff', border: '#c7d2fe', name: 'Indigo' },
+                                      { key: 'sky', hex: '#0284c7', bg: '#f0f9ff', border: '#bae6fd', name: 'Sky' },
+                                      { key: 'teal', hex: '#0d9488', bg: '#f0fdfa', border: '#99f6e4', name: 'Teal' },
+                                      { key: 'slate', hex: '#4b5563', bg: '#f8fafc', border: '#cbd5e1', name: 'Slate' },
+                                      { key: 'violet', hex: '#7c3aed', bg: '#f5f3ff', border: '#ddd6fe', name: 'Violet' }
+                                    ].map((colorObj) => (
+                                      <button
+                                        key={colorObj.key}
+                                        type="button"
+                                        onClick={() => { insertResearchLibrary(colorObj.key); setShowMoreMenu(false); }}
+                                        className="w-8 h-8 rounded-full border flex items-center justify-center hover:scale-115 active:scale-95 transition-all duration-200 shadow-sm cursor-pointer"
+                                        style={{ backgroundColor: colorObj.bg, borderColor: colorObj.border }}
+                                        title={`Insert Research in ${colorObj.name}`}
+                                      >
+                                        <div 
+                                          className="w-3 h-3 rounded-full shadow-sm"
+                                          style={{ backgroundColor: colorObj.hex }}
+                                        />
+                                      </button>
+                                    ))}
+                                  </div>
+                                </div>
+
+                                {/* Personal Info Table */}
+                                <div className="space-y-1.5 bg-slate-50/70 p-2.5 rounded-2xl border border-slate-100">
+                                  <button
+                                    type="button"
+                                    onClick={() => { insertPersonalInfoTable('slate'); setShowMoreMenu(false); }}
+                                    className="w-full py-2 px-3 bg-slate-600 hover:bg-slate-700 text-white border border-slate-500 rounded-xl font-bold text-[10px] tracking-wider uppercase transition-colors flex items-center justify-center gap-1.5"
+                                  >
+                                    <User size={13} /> Personal Information Table
+                                  </button>
                                 </div>
                               </div>
                             </div>
